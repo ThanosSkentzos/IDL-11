@@ -1,6 +1,6 @@
 scipy
 scikit-learn
-umap-leatn
+umap-learn
 pandas
 numpy
 matplotlib
