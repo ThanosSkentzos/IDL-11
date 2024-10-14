@@ -23,3 +23,11 @@ uv add -r requirements.txt
 uv remove tensosrflow
 ```
 for more check the [dependencies](https://docs.astral.sh/uv/concepts/dependencies/) page
+
+## update .bashrc
+```
+. "$HOME/.cargo/env"
+
+export PIP_CACHE_DIR=/local/s3777103/.cache/.pip
+export UV_CACHE_DIR=/local/s3777103/.cache/.uv
+```
