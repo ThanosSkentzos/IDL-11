@@ -13,4 +13,6 @@ dependencies = [
     "scipy>=1.13.1",
     "tensorflow[and-cuda]>=2.14.0",
     "umap-learn>=0.5.6",
+    "keras_tuner",
+    "openpyxl>=3.1.5",
 ]
