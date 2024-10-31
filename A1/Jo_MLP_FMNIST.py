@@ -220,10 +220,10 @@ for each_size in batch_size:
             plt.ylabel('Loss')
             plt.title('Model Loss over Epochs')
             plt.legend()
-            # plt.show()
+            plt.show()
             plt.savefig("plot_image.png")  # Saves as a PNG image
             
-            cell_name = get_cell_name(row_count, 9)
+            cell_name = get_cell_name(row_count, 10)
             
             sheet.append((3, "No", 3, each_size, str(each_act), oprimizer_str[i], score[0], score[1]))
             img = Image("plot_image.png")
