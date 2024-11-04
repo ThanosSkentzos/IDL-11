@@ -44,7 +44,10 @@ def my_callbacks():
     early_stopping_cb = k.callbacks.EarlyStopping(  
     patience=42, restore_best_weights=True,monitor="val_loss"
     )
-    return [checkpoint_cb,early_stopping_cb]
+    reduce_lr_cb = k.callbacks.ReduceLROnPlateau(
+    monitor='val_loss', factor=0.5, patience=3, min_lr=1e-6
+)
+    return [checkpoint_cb,early_stopping_cb,reduce_lr_cb]
 
 
 def split_data(x,y):

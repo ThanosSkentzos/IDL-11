@@ -12,8 +12,8 @@ from sklearn.preprocessing import StandardScaler
 #%% 
 # READ  & SCALE
 import numpy as np
-images = np.load("data/images_small.npy")
-labels = np.load("data/labels_small.npy")
+images = np.load("data/images.npy")
+labels = np.load("data/labels.npy")
 images = images.astype(float)/255
 
 
@@ -24,6 +24,8 @@ labels_24 = 2*labels[:,0] + labels[:,1]//30
 assert num_classes == len(set(labels_24))
 labels_24 = labels_24.astype(float)
 encoded_labels = k.utils.to_categorical(labels_24, num_classes)
+counts = pd.DataFrame(labels_24).value_counts()
+
 # %% 
 # SPLIT
 from sklearn.model_selection import train_test_split
@@ -38,39 +40,10 @@ input_shape=(img_rows,img_cols,1)
 
 #%% 
 # MODEL
-model = k.Sequential()
-model.add(k.layers.Conv2D(32, kernel_size=(3, 3),
-                 activation='relu',
-                 input_shape=input_shape))
-model.add(k.layers.MaxPooling2D(pool_size=(2, 2)))
-model.add(k.layers.BatchNormalization())
+from thanos_models import create_model
+model = create_model(input_shape=input_shape,num_classes=num_classes)
+model.summary()
 
-model.add(k.layers.Conv2D(64, (3, 3), activation='relu'))
-model.add(k.layers.Dropout(0.10))
-model.add(k.layers.MaxPooling2D(pool_size=(2, 2)))
-model.add(k.layers.BatchNormalization())
-
-model.add(k.layers.Conv2D(128, (3, 3), activation='relu'))
-model.add(k.layers.Dropout(0.10))
-model.add(k.layers.MaxPooling2D(pool_size=(2, 2)))
-model.add(k.layers.BatchNormalization())
-
-model.add(k.layers.Conv2D(256, (3, 3), activation='relu'))
-model.add(k.layers.Dropout(0.10))
-model.add(k.layers.MaxPooling2D(pool_size=(2, 2)))
-model.add(k.layers.BatchNormalization())
-
-model.add(k.layers.Flatten())
-model.add(k.layers.Dense(128, activation='relu'))
-model.add(k.layers.Dropout(0.10))
-
-model.add(k.layers.Dense(num_classes, activation='softmax'))
-
-model.compile(loss="categorical_crossentropy",
-              optimizer=k.optimizers.SGD(),
-              metrics=['accuracy'])
-
-model.summary
 #%% 
 # CALLBACKS
 checkpoint_cb = k.callbacks.ModelCheckpoint(
@@ -98,10 +71,14 @@ import matplotlib.pyplot as plt
 hist = pd.DataFrame(history.history)
 acc_col = ["accuracy","val_accuracy"]
 loss_col = ["loss","val_loss"]
-hist[acc_col].plot(figsize=(8, 5))
-hist[loss_col].plot(figsize=(8,5))
+title = f'{X.shape[1]}x{X.shape[2]} {num_classes} classes'
+hist[acc_col].plot(figsize=(8, 5),xlabel='epochs',ylabel='accuracy',title=title+' acc history')
+plt.savefig('cla24_acc.png')
+
+hist[loss_col].plot(figsize=(8,5),xlabel='epochs',ylabel='loss',title=title+' loss history')
+plt.savefig('cla24_loss.png')
+
 hist.to_csv('cla24.csv',index=False)
-plt.grid(True)
 # %%
 # calculate accuract
 y_pred  = model.predict(X_test)

@@ -14,8 +14,8 @@ import pandas as pd
 #%% 
 # READ  & SCALE
 import numpy as np
-images = np.load("data/images_small.npy")
-labels = np.load("data/labels_small.npy")
+images = np.load("data/images.npy")
+labels = np.load("data/labels.npy")
 images = images.astype(float)/255
 
 
@@ -70,14 +70,19 @@ history = model.fit(X, y,
           callbacks=cb)
 # %% 
 # Plot results
+import pandas as pd
 import matplotlib.pyplot as plt
 hist = pd.DataFrame(history.history)
 acc_col = ["accuracy","val_accuracy"]
 loss_col = ["loss","val_loss"]
-hist[acc_col].plot(figsize=(8, 5))
-hist[loss_col].plot(figsize=(8,5))
+title = f'{X.shape[1]}x{X.shape[2]} {num_classes} classes'
+hist[acc_col].plot(figsize=(8, 5),xlabel='epochs',ylabel='accuracy',title=title+' acc history')
+plt.savefig('cla720_acc.png')
+
+hist[loss_col].plot(figsize=(8,5),xlabel='epochs',ylabel='loss',title=title+' loss history')
+plt.savefig('cla720_loss.png')
+
 hist.to_csv('cla720.csv',index=False)
-plt.grid(True)
 # %%
 # calculate accuract
 y_pred  = model.predict(X_test)
