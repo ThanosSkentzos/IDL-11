@@ -31,7 +31,7 @@ counts = pd.DataFrame(hour_labels).value_counts()
 
 # %%
 # PREPARE NUMERICAL LABELS
-minute_labels = labels[:, 1]
+minute_labels = labels[:, 1]/60.0
 # %%
 # JOIN LABELS IN DF
 labels = pd.DataFrame(encoded_labels)
@@ -66,7 +66,7 @@ checkpoint_cb = k.callbacks.ModelCheckpoint(
     )
 early_stopping = k.callbacks.EarlyStopping(
     monitor='val_loss',  # metric to monitor
-    patience=10,          # number of epochs to wait for improvement
+    patience=42,          # number of epochs to wait for improvement
     restore_best_weights=True  # restore the best weights after stopping
 )
 reduce_lr = k.callbacks.ReduceLROnPlateau(
@@ -87,13 +87,16 @@ history = model.fit( X, [y_h, y_m],
 import pandas as pd
 import matplotlib.pyplot as plt
 hist = pd.DataFrame(history.history)
-acc_col = ["accuracy","val_accuracy"]
-loss_col = ["loss","val_loss"]
+acc_col = ["dense_1_accuracy","val_dense_1_accuracy"]
+cla_loss_col = ["dense_1_loss","val_dense_1_loss"]
+loss_col = ["dense_5_loss","val_loss"]
 title = f'{X.shape[1]}x{X.shape[2]} {num_classes} classes'
 hist[acc_col].plot(figsize=(8, 5),xlabel='epochs',ylabel='accuracy',title=title+' acc history')
-plt.savefig('cla24_acc.png')
+plt.savefig('multi_cla_acc.png')
 
+hist[cla_loss_col].plot(figsize=(8,5),xlabel='epochs',ylabel='loss',title=title+' loss history')
+plt.savefig('multi_cla_loss.png')
 hist[loss_col].plot(figsize=(8,5),xlabel='epochs',ylabel='loss',title=title+' loss history')
-plt.savefig('cla24_loss.png')
+plt.savefig('multi_loss.png')
 
-hist.to_csv('cla24.csv',index=False)
+hist.to_csv('multi.csv',index=False)
