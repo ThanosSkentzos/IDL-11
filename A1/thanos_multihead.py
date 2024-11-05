@@ -57,3 +57,43 @@ model.summary()
 
 
 # %%
+# TRAIN VARIABLES
+model.compile(loss=['categorical_crossentropy', 'mse'], 
+              optimizer=k.optimizers.Adam(learning_rate=0.0001), 
+              metrics=['accuracy', 'mae'])
+checkpoint_cb = k.callbacks.ModelCheckpoint(
+        f"combined_model.keras", save_best_only=True
+    )
+early_stopping = k.callbacks.EarlyStopping(
+    monitor='val_loss',  # metric to monitor
+    patience=10,          # number of epochs to wait for improvement
+    restore_best_weights=True  # restore the best weights after stopping
+)
+reduce_lr = k.callbacks.ReduceLROnPlateau(
+    monitor='val_loss', factor=0.5, patience=5, min_lr=1e-6
+)
+#%%
+# TRAINING
+batch_size = 64
+epochs=500
+history = model.fit( X, [y_h, y_m], 
+        batch_size=batch_size,
+        epochs=epochs,
+        verbose = 1,
+        validation_data=(X_val, [y_val_h, y_val_m]),
+        callbacks=[checkpoint_cb, early_stopping, reduce_lr])
+# %%
+# Plot results
+import pandas as pd
+import matplotlib.pyplot as plt
+hist = pd.DataFrame(history.history)
+acc_col = ["accuracy","val_accuracy"]
+loss_col = ["loss","val_loss"]
+title = f'{X.shape[1]}x{X.shape[2]} {num_classes} classes'
+hist[acc_col].plot(figsize=(8, 5),xlabel='epochs',ylabel='accuracy',title=title+' acc history')
+plt.savefig('cla24_acc.png')
+
+hist[loss_col].plot(figsize=(8,5),xlabel='epochs',ylabel='loss',title=title+' loss history')
+plt.savefig('cla24_loss.png')
+
+hist.to_csv('cla24.csv',index=False)

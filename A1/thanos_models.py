@@ -66,7 +66,7 @@ def split_data(x, y, percent=0.1):
 
 def create_multihead_model(input_shape, num_classes):
 
-    input_ = k.layers.Input(shape=input_shape[:2])
+    input_ = k.layers.Input(shape=input_shape)
     # convolutional layers
     c1 = k.layers.Conv2D(
         32,
@@ -131,4 +131,4 @@ def create_multihead_model(input_shape, num_classes):
     final_minute = k.layers.Dense(1, activation="linear")(minute_dropout3)
 
     model = k.Model(inputs=input_, outputs=[final_hour, final_minute])
-    model.summary()
+    return model 
