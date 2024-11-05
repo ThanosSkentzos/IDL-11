@@ -282,3 +282,4 @@ print(f"MAE Val : {history.history['val_mae'][min_val_loss_index]}")
 print(f"Common Sense MAE Train : {cse_train}")
 print(f"Common Sense MAE Val : {cse_val}")
 print(f"Common Sense MAE Test : {score}")
+# %%
