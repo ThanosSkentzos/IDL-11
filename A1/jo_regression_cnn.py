@@ -14,11 +14,12 @@ labels = np.load("A1/data/labels.npy")
 
 
 # %%
-# Define the function to map (hour, minute) tuples to float values upto 
+# function to map (hour, minute) tuples to float values upto 12
 def time_to_regression(row):
     return round((row[0] + row[1]/60.0), 4)
 
-img_rows, img_cols = 75, 75  #pixel size
+img_rows = images.shape[1]
+img_cols = images.shape[2]
 
 new_labels = np.apply_along_axis(time_to_regression, axis=1, arr=labels)
 
@@ -70,15 +71,20 @@ def custom_huber_loss(y_true, y_pred, delta=1.0):
     large_error_loss = delta * (tf.abs(error) - 0.5 * delta)
     return tf.reduce_mean(tf.where(is_small_error, small_error_loss, large_error_loss))
 
+# %%
+# optimizer = keras.optimizers.Adam(learning_rate=1e-3,  weight_decay=1e-5)
+optimizer = "adam"
+loss_function = "mse"
+metrics = ["mae"]
 
 # %%
 def build_model(input_shape):
     model = keras.models.Sequential()
     
-    model.add(keras.layers.Conv2D(32, kernel_size=(3, 3),
+    model.add(keras.layers.Conv2D(32, kernel_size=(5, 5),
                     activation='relu', padding='same',
                     input_shape=input_shape))
-    model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
+    model.add(keras.layers.MaxPooling2D(pool_size=(3, 2)))
     model.add(keras.layers.BatchNormalization())
 
     model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
@@ -104,9 +110,11 @@ def build_model(input_shape):
 
     model.add(keras.layers.Dense(1, activation='linear'))
     
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-3, 
-                                                  weight_decay=1e-5), 
-                  loss=custom_huber_loss, metrics=[custom_huber_loss, 'mae'])
+    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-3, 
+    #                                               weight_decay=1e-5), 
+    #               loss='huber', metrics=['mae'])
+    
+    model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics)
 
     return model
 
@@ -127,7 +135,7 @@ reduce_lr = keras.callbacks.ReduceLROnPlateau(
     monitor='val_loss', factor=0.8, patience=10, min_lr=1e-6
 )
 
-
+#%%
 
 history = model.fit(x_train, y_train,
                 batch_size=batch_size,
@@ -172,13 +180,8 @@ score
 plt.scatter(y_test_pred, y_test)
 plt.xlabel('Predicted')
 plt.ylabel('True')
-plt.title('Regression with diminishing learning rate with custom huber loss')
-# %%
+plt.title(f'Regression with diminishing learning rate with {loss_function}')
 
-# y_true = np.array([0.1,1.2,2.3,3.4,4.5,5.6,6.7,7.8,8.9,10.11,11.22])
-# y_pred = np.array([-0.1,-1.2,2.3,3.4,4.5,5.6,6.7,-7.8,12.9,10.11,-11.22])
-
-# reg_loss_funtion(y_true, y_pred)
 # %%
 sorted_indices = np.argsort(y_test)
 sorted_y_test = y_test[sorted_indices]
@@ -199,10 +202,9 @@ plt.scatter(same_indices, sorted_y_test[same_indices], color='green', s=100, lab
 for i in range(len(sorted_y_test)):
     plt.plot([i, i], [sorted_y_test[i], sorted_y_pred[i]], 'k:', alpha=0.6)  # 'k:' makes a black dotted line
 
-# Adding labels and legend
 plt.xlabel('Index')
 plt.ylabel('Values')
-plt.title('Plot of y_true and y_pred connected for with diminishing learning rate')
+plt.title(f'Plot of y_true and y_pred connected for with diminishing learning rate and {loss_function}')
 plt.legend()
 
 # Show the plot
@@ -215,7 +217,7 @@ plt.show()
 import matplotlib.pyplot as plt
 import numpy as np
 
-values = 1 - common_sense_error[sorted_indices]  # Random values for each angle
+values = -common_sense_error[sorted_indices]  # Random values for each angle
 
 # Create polar plot
 plt.figure(figsize=(6, 6))
@@ -223,7 +225,7 @@ ax = plt.subplot(111, polar=True)
 ax.plot(2 * np.pi * sorted_y_test/12, values, marker='o')
 
 # Add title and show plot
-ax.set_title("Regression Common sense Error with Dim LR and custom huber loss")
+ax.set_title(f"Regression Common sense Error with Dim LR and {loss_function}")
 theta_ticks = np.linspace(0, 2 * np.pi, 12, endpoint=False)  # 12 hours around the clock
 ax.set_xticks(theta_ticks)
 
@@ -231,24 +233,7 @@ ax.set_xticklabels(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'
 
 plt.show()
 
-# %%
 
-# labels = np.array(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'])
-# # values = np.array([.5,1.5,2.5,3.5,4.5,5.5,6.5,7.5,8.5,9.5,10.5,11.5])  # Random values for each hour
-# values = np.arange(12)
-# vals = np.ones_like(values)
-# # Angles for each bar
-# angles = np.linspace(0, 2 * np.pi, len(labels), endpoint=False).tolist()
-# print(values)
-# # Plotting
-# fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(polar=True))
-# bars = ax.bar(values/12.0*2*np.pi , vals, color=plt.cm.viridis(values), alpha=0.7)
-
-# # Label each bar with hour labels
-# ax.set_xticks(angles)
-# ax.set_xticklabels(labels)
-
-# plt.show()
 # %%
 y_train_pred = model.predict(x_train.reshape(x_train.shape[0], img_rows, img_cols)).flatten()
 abs_values = abs(y_train_pred.flatten()-y_train)
