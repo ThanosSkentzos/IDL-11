@@ -9,8 +9,8 @@ from sklearn.model_selection import train_test_split
 
 
 # %%
-images = np.load("A1/data/images.npy")
-labels = np.load("A1/data/labels.npy")
+images = np.load("A1/data/images_150.npy")
+labels = np.load("A1/data/labels_150.npy")
 
 
 # %%
@@ -72,9 +72,9 @@ def custom_huber_loss(y_true, y_pred, delta=1.0):
     return tf.reduce_mean(tf.where(is_small_error, small_error_loss, large_error_loss))
 
 # %%
-# optimizer = keras.optimizers.Adam(learning_rate=1e-3,  weight_decay=1e-5)
-optimizer = "adam"
-loss_function = "mse"
+optimizer = keras.optimizers.Adam(learning_rate=1e-3,  weight_decay=1e-5)
+# optimizer = "adam"
+loss_function = "huber"
 metrics = ["mae"]
 
 # %%
@@ -84,12 +84,12 @@ def build_model(input_shape):
     model.add(keras.layers.Conv2D(32, kernel_size=(5, 5),
                     activation='relu', padding='same',
                     input_shape=input_shape))
-    model.add(keras.layers.MaxPooling2D(pool_size=(3, 2)))
+    model.add(keras.layers.MaxPooling2D(pool_size=(5, 5)))
     model.add(keras.layers.BatchNormalization())
 
     model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
     model.add(keras.layers.Dropout(0.2))
-    model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
+    model.add(keras.layers.MaxPooling2D(pool_size=(3, 3)))
     model.add(keras.layers.BatchNormalization())
 
     model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', padding='same'))
@@ -102,11 +102,24 @@ def build_model(input_shape):
     model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
     model.add(keras.layers.BatchNormalization())
 
+    model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', padding='same'))
+    model.add(keras.layers.Dropout(0.3))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
+    model.add(keras.layers.BatchNormalization())
+    
     model.add(keras.layers.Flatten())
     model.add(keras.layers.Dense(512, activation='relu'))
     model.add(keras.layers.Dropout(0.5))
+    model.add(keras.layers.Dense(256, activation='relu'))
+    model.add(keras.layers.Dropout(0.3))
     model.add(keras.layers.Dense(128, activation='relu'))
     model.add(keras.layers.Dropout(0.3))
+    
+    model.add(keras.layers.Dense(64, activation='relu'))
+    model.add(keras.layers.Dropout(0.3))
+    
+    model.add(keras.layers.Dense(32, activation='relu'))
+    model.add(keras.layers.Dropout(0.1))
 
     model.add(keras.layers.Dense(1, activation='linear'))
     
@@ -128,7 +141,7 @@ model.summary()
 # Initialize EarlyStopping with patience
 early_stopping = keras.callbacks.EarlyStopping(
     monitor='val_loss',  # metric to monitor
-    patience=100,          # number of epochs to wait for improvement
+    patience=50,          # number of epochs to wait for improvement
     restore_best_weights=True  # restore the best weights after stopping
 )
 reduce_lr = keras.callbacks.ReduceLROnPlateau(
