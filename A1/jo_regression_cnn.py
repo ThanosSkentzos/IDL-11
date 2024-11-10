@@ -9,14 +9,13 @@ from sklearn.model_selection import train_test_split
 
 
 # %%
-images = np.load("A1/data/images_150.npy")
-labels = np.load("A1/data/labels_150.npy")
-
+images = np.load("data/images_150.npy")
+labels = np.load("data/labels_150.npy")
 
 # %%
 # function to map (hour, minute) tuples to float values upto 12
 def time_to_regression(row):
-    return round((row[0] + row[1]/60.0), 4)
+    return round((row[0] + row[1]/60.0), 3)
 
 img_rows = images.shape[1]
 img_cols = images.shape[2]
@@ -84,12 +83,18 @@ def build_model(input_shape):
     model.add(keras.layers.Conv2D(32, kernel_size=(5, 5),
                     activation='relu', padding='same',
                     input_shape=input_shape))
-    model.add(keras.layers.MaxPooling2D(pool_size=(5, 5)))
+    model.add(keras.layers.MaxPooling2D(pool_size=(3, 3)))
+    model.add(keras.layers.BatchNormalization())
+    
+    model.add(keras.layers.Conv2D(32, kernel_size=(5, 5),
+                    activation='relu', padding='same',
+                    input_shape=input_shape))
+    model.add(keras.layers.MaxPooling2D(pool_size=(3, 3)))
     model.add(keras.layers.BatchNormalization())
 
-    model.add(keras.layers.Conv2D(64, (3, 3), activation='relu', padding='same'))
-    model.add(keras.layers.Dropout(0.2))
-    model.add(keras.layers.MaxPooling2D(pool_size=(3, 3)))
+    model.add(keras.layers.Conv2D(64, (5, 5), activation='relu', padding='same'))
+    model.add(keras.layers.Dropout(0.1))
+    model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
     model.add(keras.layers.BatchNormalization())
 
     model.add(keras.layers.Conv2D(128, (3, 3), activation='relu', padding='same'))
@@ -98,34 +103,26 @@ def build_model(input_shape):
     model.add(keras.layers.BatchNormalization())
 
     model.add(keras.layers.Conv2D(256, (3, 3), activation='relu', padding='same'))
-    model.add(keras.layers.Dropout(0.3))
+    model.add(keras.layers.Dropout(0.1))
     model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
     model.add(keras.layers.BatchNormalization())
 
-    model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', padding='same'))
-    model.add(keras.layers.Dropout(0.3))
-    model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
-    model.add(keras.layers.BatchNormalization())
+    # model.add(keras.layers.Conv2D(512, (3, 3), activation='relu', padding='same'))
+    # model.add(keras.layers.Dropout(0.3))
+    # model.add(keras.layers.MaxPooling2D(pool_size=(2, 2)))
+    # model.add(keras.layers.BatchNormalization())
     
     model.add(keras.layers.Flatten())
     model.add(keras.layers.Dense(512, activation='relu'))
     model.add(keras.layers.Dropout(0.5))
-    model.add(keras.layers.Dense(256, activation='relu'))
-    model.add(keras.layers.Dropout(0.3))
+
     model.add(keras.layers.Dense(128, activation='relu'))
     model.add(keras.layers.Dropout(0.3))
     
-    model.add(keras.layers.Dense(64, activation='relu'))
-    model.add(keras.layers.Dropout(0.3))
-    
-    model.add(keras.layers.Dense(32, activation='relu'))
+    model.add(keras.layers.Dense(128, activation='relu'))
     model.add(keras.layers.Dropout(0.1))
-
-    model.add(keras.layers.Dense(1, activation='linear'))
     
-    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=1e-3, 
-    #                                               weight_decay=1e-5), 
-    #               loss='huber', metrics=['mae'])
+    model.add(keras.layers.Dense(1, activation='linear'))
     
     model.compile(optimizer=optimizer, loss=loss_function, metrics=metrics)
 
@@ -149,7 +146,6 @@ reduce_lr = keras.callbacks.ReduceLROnPlateau(
 )
 
 #%%
-
 history = model.fit(x_train, y_train,
                 batch_size=batch_size,
                 epochs=epochs,
@@ -169,7 +165,8 @@ val_loss = history.history['val_loss']
 # Plot the loss
 plt.figure(figsize=(10, 6))
 plt.plot(loss, label='Training Loss')
-plt.plot(val_loss[:-1], label='Validation Loss')
+plt.plot(val_loss, label='Validation Loss')
+# plt.yscale('log')
 plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.title(f'{img_rows} x {img_cols} - Regression loss history with diminishing learning rate and custom huber loss')
@@ -187,7 +184,6 @@ common_sense_error = np.where((y_test_pred.flatten() >= 0.) & (y_test_pred.flatt
 
 score = np.mean(common_sense_error)
 score
-
 
 #%%
 plt.scatter(y_test_pred, y_test)
@@ -224,8 +220,6 @@ plt.legend()
 plt.show()
 
 
-
-
 # %%
 import matplotlib.pyplot as plt
 import numpy as np
@@ -235,12 +229,13 @@ values = -common_sense_error[sorted_indices]  # Random values for each angle
 # Create polar plot
 plt.figure(figsize=(6, 6))
 ax = plt.subplot(111, polar=True)
-ax.plot(2 * np.pi * sorted_y_test/12, values, marker='o')
+ax.scatter(2 * np.pi * sorted_y_test/12, values, marker='o')
 
 # Add title and show plot
 ax.set_title(f"Regression Common sense Error with Dim LR and {loss_function}")
 theta_ticks = np.linspace(0, 2 * np.pi, 12, endpoint=False)  # 12 hours around the clock
 ax.set_xticks(theta_ticks)
+ax.set_yticks(np.arange(-6, 0))
 
 ax.set_xticklabels(['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11'])
 
