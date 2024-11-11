@@ -118,7 +118,7 @@ model = NN(best_params)
 model.summary()
 history = model.fit(X_train_full_scaled, y_train_full, batch_size=64, epochs=50)
 model.save_weights("model.weights.h5")
-# %%
+
 # HISTORY
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -128,10 +128,16 @@ plt.grid(True)
 # set the vertical range to [0-1]
 plt.show()
 
+pred = model.predict(X_test).argmax(axis=1)
+y_test_vals = y_test.argmax(axis=1)
+print(sum(pred==y_test_vals)/len(pred),"test accuracy")
+
 # %%
 # CIFAR 10 DATA and MODEL
 c10 = k.datasets.cifar10
 (X_train_full_c, y_train_full_c), (X_test_c, y_test_c) = c10.load_data()
+y_train_full_c = tf.keras.utils.to_categorical(y_train_full_c, 10)
+y_test_c = tf.keras.utils.to_categorical(y_test_c, 10)
 X_train_full_c = X_train_full_c.mean(axis=-1)
 mc, sc = X_train_full_c.mean(), X_train_full_c.std()
 X_train_full_c_scaled = (X_train_full_c - mc) / sc
