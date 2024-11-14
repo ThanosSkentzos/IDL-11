@@ -84,7 +84,7 @@ plt.savefig('cla720_loss.png')
 
 hist.to_csv('cla720.csv',index=False)
 # %%
-# calculate accuract
+# calculate accuracy --> 8.2%
 y_pred  = model.predict(X_test)
 y_pred_class = np.argmax(y_pred,axis=1)
 y_true_class= np.argmax(y_test,axis=1)

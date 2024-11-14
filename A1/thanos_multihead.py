@@ -100,3 +100,9 @@ hist[loss_col].plot(figsize=(8,5),xlabel='epochs',ylabel='loss',title=title+' lo
 plt.savefig('multi_loss.png')
 
 hist.to_csv('multi.csv',index=False)
+#%%
+# test acc 0.84
+pred = model.predict(X_test)[0].argmax(axis=1)
+true = y_test.values[:,:12].argmax(axis=1)
+"test accuracy",sum(pred==true)/len(pred)
+# %%

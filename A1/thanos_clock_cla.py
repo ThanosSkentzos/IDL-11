@@ -2,6 +2,7 @@
 # IMPORTS
 import os, pickle
 
+import pandas as pd
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 os.environ["KMP_AFFINITY"] = "noverbose"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
@@ -66,7 +67,6 @@ history = model.fit(X, y,
           callbacks=[checkpoint_cb, early_stopping_cb])
 # %% 
 # Plot results
-import pandas as pd
 import matplotlib.pyplot as plt
 hist = pd.DataFrame(history.history)
 acc_col = ["accuracy","val_accuracy"]
@@ -80,7 +80,7 @@ plt.savefig('cla24_loss.png')
 
 hist.to_csv('cla24.csv',index=False)
 # %%
-# calculate accuract
+# calculate test accuracy ==> 88.3%
 y_pred  = model.predict(X_test)
 y_pred_class = np.argmax(y_pred,axis=1)
 y_true_class= np.argmax(y_test,axis=1)
