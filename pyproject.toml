@@ -16,4 +16,5 @@ dependencies = [
     "umap-learn>=0.5.6",
     "keras_tuner",
     "openpyxl>=3.1.5",
+    "opencv-python>=4.10.0.84",
 ]
