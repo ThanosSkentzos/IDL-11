@@ -14,6 +14,7 @@ def load_images_from_folder(folder):
                 try:
                     # Read image
                     img = cv2.imread(file_path, cv2.IMREAD_COLOR)  # Reads the image in color
+                    img = cv2.resize(img,(64,64))
                     if img is not None:
                         images.append(img)
                 except Exception as e:
@@ -23,10 +24,9 @@ def load_images_from_folder(folder):
 # Main folder path
 main_folder = "images"  # Replace with your folder path
 print(f"Loading images from {main_folder} folder")
-images = load_images_from_folder(main_folder)
+images_resized = load_images_from_folder(main_folder)
 #%%
 # Convert the list of images to a numpy array
-images_resized = [cv2.resize(im,(64,64)) for im in tqdm(images)]
 images_array = np.array(images_resized, dtype=np.uint8)  # Use dtype=object for images of varying dimensions
 print(images_array.shape)
 #%%
@@ -35,7 +35,7 @@ print(images_array.shape)
 output_file = "images_64x64.npy"
 np.save(output_file,images_array)
 
-print(f"Saved {len(images)} images to {output_file}")
+print(f"Saved {len(images_resized)} images to {output_file}")
 
 
 # %%
