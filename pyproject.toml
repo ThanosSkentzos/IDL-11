@@ -17,4 +17,5 @@ dependencies = [
     "keras_tuner",
     "openpyxl>=3.1.5",
     "opencv-python>=4.10.0.84",
+    "tensorrt>=10.6.0",
 ]
