@@ -14,6 +14,7 @@ def load_images_from_folder(folder):
                 try:
                     # Read image
                     img = cv2.imread(file_path, cv2.IMREAD_COLOR)  # Reads the image in color
+                    img = cv2.cvtColor(img,cv2.COLOR_BGR2RGB)
                     img = cv2.resize(img,(64,64))
                     if img is not None:
                         images.append(img)
