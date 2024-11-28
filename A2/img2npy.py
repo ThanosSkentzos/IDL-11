@@ -9,7 +9,7 @@ def load_images_from_folder(folder):
     images = []
     for root, dirs, files in os.walk(folder):
         for file in tqdm(files):
-            if file.lower().endswith(".jpg"):
+            if file.lower().endswith((".jpg",".png")):
                 file_path = os.path.join(root, file)
                 try:
                     # Read image
@@ -24,8 +24,10 @@ def load_images_from_folder(folder):
 
 # Main folder path
 main_folder = "images"  # Replace with your folder path
-print(f"Loading images from {main_folder} folder")
-images_resized = load_images_from_folder(main_folder)
+cat_folder = "cat_images"
+folder = cat_folder
+print(f"Loading images from {folder} folder")
+images_resized = load_images_from_folder(folder)
 #%%
 # Convert the list of images to a numpy array
 images_array = np.array(images_resized, dtype=np.uint8)  # Use dtype=object for images of varying dimensions
