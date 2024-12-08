@@ -293,15 +293,34 @@ for epoch in range(50):
     latent_vectors = np.random.randn(9, latent_dim)/6 ## You can tweak this coefficient to increase/decrease the std of the sampled vectors
     images = decoder(latent_vectors)
     grid_plot(images, epoch, name='VAE generated images (randomly sampled from the latent space)', n=3, save=False)
+#%% extract encoder
+encoder = vae.layers[1:-4]
+fm = dataset[:64]
+for l in encoder:
+    fm = l(fm)
+    print(fm.shape)
+m = vae.layers[-4](fm)
+s = vae.layers[-3](fm)
+values = np.array(m)
+sam = Sampling()
+results = sam.call([m,s])
+
+#%%
+
+plt.hist(np.array(results).flatten(),bins=200)
+plt.title("VAE Weight Distribution for subset")
+# plt.show()
+plt.savefig("VAE_sample_dist.png")
+
 #%% extract decoder
 decoder = vae.layers[-1]
 input_shape = decoder.input_shape[1:]
 decoder.summary()
 a = 0.5
 random_data = 2*a*np.random.random(size=(9,*input_shape))-a
-# random_data = a*np.random.random(size=(9,*input_shape))-0.2*a
+random_data = np.random.normal(0,0.5,size=(9,*input_shape))
 pred = decoder.predict(random_data)
-grid_plot(pred)
+grid_plot(pred,name=f'VAE cat construction') 
 #%%
 # # GAN
 """*Note: again, you might experiment with the latent dimensionality, batch size and the architecture of your convolutional nets to see how it affects the generative capabilities of this model.*
