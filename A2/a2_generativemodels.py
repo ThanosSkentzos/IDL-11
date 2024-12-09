@@ -307,7 +307,8 @@ for epoch in range(50):
     # Generate random vectors that we will use to sample from the learned latent space
     latent_vectors = np.random.randn(9, latent_dim)/6 ## You can tweak this coefficient to increase/decrease the std of the sampled vectors
     images = decoder(latent_vectors)
-    grid_plot(images, epoch, name='VAE generated images (randomly sampled from the latent space)', n=3, save=False)
+    if epoch%5==0:
+        grid_plot(images, epoch, name='VAE generated images (randomly sampled from the latent space)', n=3, save=False)
 #%% extract encoder & run for batch
 encoder = vae.layers[1:-4]
 fm = dataset[:64]
