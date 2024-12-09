@@ -193,13 +193,28 @@ for epoch in range(10):
     reconstructed = cae.predict(samples)
     grid_plot(samples, epoch, name='Original', n=3, save=False)
     grid_plot(reconstructed, epoch, name='Reconstructed', n=3, save=False)
+#%% extract CAE encoder
+encoder = cae.layers[0]
+z = encoder.predict(dataset[:64])
+m,s= np.array(z).mean(),np.array(z).std()
+
+#%% 
+# get distribution
+vals = np.array(z).flatten()
+plt.hist(vals,bins=200)
+plt.title("CAE Weight Distribution for subset")
+# plt.show()
+plt.savefig("CAE_sample_dist.png")
 #%% extract decoder
 decoder = cae.layers[1]
 input_shape = decoder.input_shape[1:]
-decoder.summary()
-random_data = 0.8*np.random.random(size=(9,*input_shape))
+# decoder.summary()
+random_data = np.random.normal(m,s,size=(9,*input_shape))
+idx = random_data<0
+random_data[idx]=0
+#%%
 pred = decoder.predict(random_data)
-grid_plot(pred)
+grid_plot(pred[:9],name="CAE cat construction")
 #%% 
 # VAE
 """*Note: You may experiment with the latent dimensionality and number of filters in your convolutional network to see how it affects the reconstruction quality. Remember that this also affects the size of the model and time it takes to train.*
@@ -293,7 +308,7 @@ for epoch in range(50):
     latent_vectors = np.random.randn(9, latent_dim)/6 ## You can tweak this coefficient to increase/decrease the std of the sampled vectors
     images = decoder(latent_vectors)
     grid_plot(images, epoch, name='VAE generated images (randomly sampled from the latent space)', n=3, save=False)
-#%% extract encoder
+#%% extract encoder & run for batch
 encoder = vae.layers[1:-4]
 fm = dataset[:64]
 for l in encoder:
@@ -305,7 +320,7 @@ values = np.array(m)
 sam = Sampling()
 results = sam.call([m,s])
 
-#%%
+#%% find distribution
 
 plt.hist(np.array(results).flatten(),bins=200)
 plt.title("VAE Weight Distribution for subset")
