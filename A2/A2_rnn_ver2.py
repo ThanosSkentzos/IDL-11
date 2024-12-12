@@ -309,7 +309,7 @@ from sklearn.model_selection import train_test_split
 
 
 data_percentage = [[80.0, 10.0, 10.0, 50], [50.0, 0.0, 50.0, 50], [25.0, 0.0, 75.0, 75], [10.0, 0.0, 90.0, 100]]
-
+models=[]
 for each in data_percentage:
     print("TRAIN, VALID, TEST Percentage", each[0], each[1], each[2])
     X_train, X_test, y_train, y_test = train_test_split(X_text_onehot, y_text_onehot, 
@@ -375,8 +375,9 @@ for each in data_percentage:
     print("Test Accuracy for text to text model: ", model.evaluate(X_test, y_test))
     print("Test String Accuracy: ", accuracy)
 
-    
     #to clear cache
+    models.append(model)
+    continue
     import gc
 
     # Delete unnecessary variables
@@ -384,9 +385,50 @@ for each in data_percentage:
 
     # Force garbage collection
     gc.collect()
-    
+#%%
+# TODO check that we get correct results -> done
+preds = [list(map(decode_labels,m.predict(X_test))) for m in models]
+trues = list(map(decode_labels,y_test))
+scores = [accuracy_score(trues,i) for i in preds+[trues]]
+evals = [m.evaluate(X_test,y_test)[1] for m in models] + [1]
+#%%
+# TODO when do we get a decreased accuracy and why
+# entire output numbers
+columns = [",".join([str(i) for i in l]) for l in data_percentage] + ['true']
+score_df = pd.DataFrame([scores,evals])
+score_df.index=["test_string_accuracy","test_character_accuracy"]
+score_df.columns = columns
+df = pd.DataFrame(preds+[trues]).T
+df.columns = columns
+df.plot.scatter(columns[1],columns[-1])
+df.plot.scatter(columns[2],columns[-1])
+df.plot.scatter(columns[3],columns[-1])
+#%%
+# symbol by symbol
+wrong_positions = [np.argwhere(np.array(p)!=trues) for p in preds]
+# TODO visualize the differences perhaps scatterplot
+#find out what kind of mistakes your models make on the misclassified samples.
+wrong_data = [X_test[pos] for pos in wrong_positions]
 
+# decoded_wrong_inputs = [[list(map(decode_labels,data)) for data in model_wrong_data] for model_wrong_data in wrong_data]
+wrong_outputs = [np.array(p)[idx] for idx,p in zip(wrong_positions,preds)]
+wrong_out_characters = ["".join([str(i) for i in w.ravel()]) for w in wrong_outputs]
+correct_characters = ["".join([str(i) for i in np.array(trues)[idx].ravel()]) for idx in wrong_positions ]
 
+pred_characters = ["".join([str(i) for i in y]) for y in preds]
+true_characters = "".join([str(char) for y in trues for char in y])
+mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
+
+from collections import Counter
+counts = [Counter([(true,pred) for true,pred in zip(true_characters,chars)]) for chars in pred_characters]
+
+for i in range(len(models)):
+    plt.figure()
+    x = list(map(mapping.get,true_characters)),
+    y = list(map(mapping.get,pred_characters[i]))
+
+    plt.xticks(range(len(unique_characters)),unique_characters)
+    plt.yticks(range(len(unique_characters)),unique_characters)
 # %% [markdown]
 # 
 # ## II. Image to text RNN Model
@@ -548,10 +590,8 @@ from sklearn.metrics import accuracy_score, classification_report, confusion_mat
 predictions = model.predict(X_test)
 y_pred = [decode_labels(y) for y in predictions]
 y_actual = [decode_labels(y) for y in y_test]
-
 accuracy = accuracy_score(y_actual, y_pred)
 print("Accuracy for image to text model:", accuracy)
-
 
 # %%
 from tensorflow.keras.layers import GlobalAveragePooling2D,GlobalAveragePooling1D,ConvLSTM2D, BatchNormalization, Dropout,LayerNormalization
