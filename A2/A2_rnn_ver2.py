@@ -404,6 +404,8 @@ df.plot.scatter(columns[1],columns[-1])
 df.plot.scatter(columns[2],columns[-1])
 df.plot.scatter(columns[3],columns[-1])
 #%%
+df.plot.scatter(columns[0],columns[-1])
+#%%
 # symbol by symbol
 wrong_positions = [np.argwhere(np.array(p)!=trues) for p in preds]
 # TODO visualize the differences perhaps scatterplot
@@ -422,13 +424,25 @@ mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
 from collections import Counter
 counts = [Counter([(true,pred) for true,pred in zip(true_characters,chars)]) for chars in pred_characters]
 
-for i in range(len(models)):
-    plt.figure()
-    x = list(map(mapping.get,true_characters)),
-    y = list(map(mapping.get,pred_characters[i]))
+x=[each[0] for each in counts[0].keys()]
+y=[each[1] for each in counts[0].values()]
+z=[each for each in counts[0].values()]
+plt.figure(figsize=(8,6))
+sc = plt.scatter(x, y, c=z, cmap='hot', s=50, edgecolor='none')
+plt.colorbar(sc, label='Intensity')
+plt.title("Heated Scatter Plot (Color by Value)")
+plt.xlabel("X Axis")
+plt.ylabel("Y Axis")
+plt.show()
 
-    plt.xticks(range(len(unique_characters)),unique_characters)
-    plt.yticks(range(len(unique_characters)),unique_characters)
+
+# for i in range(len(models)):
+#     plt.figure()
+#     x = list(map(mapping.get,true_characters)),
+#     y = list(map(mapping.get,pred_characters[i]))
+
+#     plt.xticks(range(len(unique_characters)),unique_characters)
+#     plt.yticks(range(len(unique_characters)),unique_characters)
 # %% [markdown]
 # 
 # ## II. Image to text RNN Model
