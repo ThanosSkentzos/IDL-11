@@ -429,10 +429,12 @@ for i in range(len(models)):
     x=[each[0] for each in counts[i].keys()]
     y=[each[1] for each in counts[i].keys()]
     z=[each for each in counts[i].values()]
-    l = sorted(zip(x,y,z))
+    l = list(zip(x,y,z))
+    l = sorted([(i,i,0) for i in unique_characters]) + l
     x,y,z = [i[0] for i in l],[i[1] for i in l],[i[2] for i in l]
+    z = np.log10(z)
     plt.figure(figsize=(8,6))
-    sc = plt.scatter(x, y, c=z, cmap='hot', s=50, edgecolor='none')
+    sc = plt.scatter(x, y, c=z, cmap='coolwarm_r', s=50, edgecolor='none')
     plt.colorbar(sc, label='Intensity')
     plt.title("Heated Scatter Plot (Color by Value)")
     plt.xlabel("X Axis")
