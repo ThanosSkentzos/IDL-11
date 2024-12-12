@@ -429,6 +429,8 @@ for i in range(len(models)):
     x=[each[0] for each in counts[i].keys()]
     y=[each[1] for each in counts[i].keys()]
     z=[each for each in counts[i].values()]
+    l = sorted(zip(x,y,z))
+    x,y,z = [i[0] for i in l],[i[1] for i in l],[i[2] for i in l]
     plt.figure(figsize=(8,6))
     sc = plt.scatter(x, y, c=z, cmap='hot', s=50, edgecolor='none')
     plt.colorbar(sc, label='Intensity')
