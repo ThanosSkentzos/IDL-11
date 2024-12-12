@@ -424,16 +424,18 @@ mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
 from collections import Counter
 counts = [Counter([(true,pred) for true,pred in zip(true_characters,chars)]) for chars in pred_characters]
 
-x=[each[0] for each in counts[0].keys()]
-y=[each[1] for each in counts[0].values()]
-z=[each for each in counts[0].values()]
-plt.figure(figsize=(8,6))
-sc = plt.scatter(x, y, c=z, cmap='hot', s=50, edgecolor='none')
-plt.colorbar(sc, label='Intensity')
-plt.title("Heated Scatter Plot (Color by Value)")
-plt.xlabel("X Axis")
-plt.ylabel("Y Axis")
-plt.show()
+
+for i in range(len(models)):
+    x=[each[0] for each in counts[i].keys()]
+    y=[each[1] for each in counts[i].keys()]
+    z=[each for each in counts[i].values()]
+    plt.figure(figsize=(8,6))
+    sc = plt.scatter(x, y, c=z, cmap='hot', s=50, edgecolor='none')
+    plt.colorbar(sc, label='Intensity')
+    plt.title("Heated Scatter Plot (Color by Value)")
+    plt.xlabel("X Axis")
+    plt.ylabel("Y Axis")
+    plt.show()
 
 
 # for i in range(len(models)):
