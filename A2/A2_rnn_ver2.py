@@ -134,7 +134,7 @@ def create_data(highest_integer, num_addends=2, operands=['+', '-']):
     for i in range(highest_integer + 1):      # First addend
         for j in range(highest_integer + 1):  # Second addend
             for sign in operands: # Create all possible combinations of operands
-                query_string = to_padded_chars(str(i) + sign + str(j), max_len=max_query_length, pad_right=False)
+                query_string = to_padded_chars(str(i) + sign + str(j), max_len=max_query_length, pad_right=True)
                 query_image = []
 
                 for n, char in enumerate(query_string):
@@ -143,7 +143,7 @@ def create_data(highest_integer, num_addends=2, operands=['+', '-']):
                     query_image.append(image_set[index].squeeze())
 
                 result = eval(query_string)
-                result_string = to_padded_chars(result, max_len=max_answer_length, pad_right=False)
+                result_string = to_padded_chars(result, max_len=max_answer_length, pad_right=True)
                 result_image = []
                 
                 for n, char in enumerate(result_string):
@@ -403,11 +403,10 @@ X_test, X_valid, y_test, y_valid = train_test_split(X_test, y_test, test_size=0.
 # %%
 print(decode_labels(y_test[0]))
 
-for i, frame in enumerate(X_test[0]):
-    plt.imshow(frame, cmap='gray')  # Display the frame in grayscale
-    plt.title(f"Frame {i + 1}")
-    plt.axis("off")
-    plt.show()
+plt.imshow(np.hstack(X_test[0]), cmap='gray')  # Display the frame in grayscale
+plt.title(f"X")
+plt.axis("off")
+plt.show()
 
 # %%
 ## Your code
@@ -481,7 +480,7 @@ def build_img2text_model2():
     img2text.add(TimeDistributed(MaxPooling2D((2, 2))))
     img2text.add(TimeDistributed(Dropout(0.2)))
     img2text.add(TimeDistributed(Flatten()))
-    img2text.add(TimeDistributed(Dense(256, activation='relu')))
+    img2text.add(TimeDistributed(Dense(200, activation='relu')))
     img2text.add(LSTM(256, return_sequences=True))
     img2text.add(LSTM(256))
     
@@ -523,19 +522,24 @@ history = model.fit(
 #%%
 model.save(f'submission1_image_to_text.keras')
 
+#%%
 import pandas as pd
 data_history = pd.DataFrame(history.history)
 data_history.to_csv('image_to_text_history.csv')
+
 plt.plot(history.history['loss'], label='loss')
 plt.plot(history.history['val_loss'], label='val_loss')
 plt.xlabel('epochs')
 plt.ylabel('score')
 plt.legend(loc="best")
 
-
 plt.grid(True)
 plt.tight_layout()
 plt.show()
+
+print("Train Accuracy for text to text model:", model.evaluate(X_train, y_train))
+print("Test Accuracy for text to text model:", model.evaluate(X_test, y_test))
+
 
 # %%
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
@@ -545,6 +549,7 @@ y_actual = [decode_labels(y) for y in y_test]
 
 accuracy = accuracy_score(y_actual, y_pred)
 print("Accuracy for image to text model:", accuracy)
+
 
 # %%
 from tensorflow.keras.layers import GlobalAveragePooling2D,GlobalAveragePooling1D,ConvLSTM2D, BatchNormalization, Dropout,LayerNormalization
