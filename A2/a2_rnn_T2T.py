@@ -349,7 +349,7 @@ for each in data_percentage:
     gc.collect()
 
 #%%
-# TODO check that we get correct results -> done
+# check that we get correct results -> done
 preds = [list(map(decode_labels,m.predict(X_test))) for m in models]
 trues = list(map(decode_labels,y_test))
 scores = [accuracy_score(trues,i) for i in preds+[trues]]
@@ -378,7 +378,7 @@ mistakes.columns = ["100s position","10s position","1s position"]
 mistakes.plot.bar(log=True,rot=8,cmap="coolwarm")
 plt.savefig('mistakes.png')
 #%%
-# TODO when do we get a decreased accuracy and why
+# when do we get a decreased accuracy and why
 # entire output numbers
 columns = [",".join([str(i) for i in l]) for l in data_percentage] + ['true']
 score_df = pd.DataFrame([scores,scores_chars, evals])
@@ -394,7 +394,7 @@ df.columns = columns
 #%%
 # symbol by symbol
 wrong_positions = [np.argwhere(np.array(p)!=trues) for p in preds]
-# TODO visualize the differences perhaps scatterplot
+# visualize the differences perhaps scatterplot
 #find out what kind of mistakes your models make on the misclassified samples.
 wrong_data = [X_test[pos] for pos in wrong_positions]
 
