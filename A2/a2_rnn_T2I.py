@@ -471,7 +471,47 @@ def build_text2img_model():
 
     return text2img
 
+
+def build_text2img_model_addl():
+
+    text2img = tf.keras.Sequential()
+
+    text2img.add(LSTM(256, input_shape=(None, len(unique_characters)), return_sequences=True))
+    text2img.add(LSTM(256))
+    text2img.add(Dropout(0.1))
+    text2img.add(RepeatVector(max_answer_length))
+
+    # add reshape 
+    text2img.add(LSTM(256, return_sequences=True))
+    text2img.add(Dropout(0.1))
+    
+    # text2img.add(TimeDistributed(Dense( 28 * 28, activation='sigmoid', kernel_regularizer=l2(0.001))))
+    
+    # lets slowly increase the dense 
+    text2img.add(TimeDistributed(Dense( 7 * 7 * 28, activation='sigmoid', kernel_regularizer=l2(0.001))))
+    text2img.add(Reshape((3, 7, 7, 28)))
+
+    #default_args=dict(kernel_size=(3,3),  padding='same', activation='relu')
+
+    text2img.add(TimeDistributed(Conv2DTranspose(filters=7, kernel_size=(2, 2), strides=2, padding='same', 
+                                                 activation='relu')))
+    
+    text2img.add(TimeDistributed(Conv2DTranspose(filters=7, kernel_size=(2, 2) ,strides=2, padding='same', 
+                                                 activation = 'relu')))
+    text2img.add(BatchNormalization())
+    text2img.add(TimeDistributed(Conv2D(filters=1, kernel_size=(3, 3), padding='same', activation='sigmoid')))
+
+    # Compile the model
+    text2img.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+
+    text2img.summary()
+    #text2img.compile(loss='mse', optimizer='adam', metrics=['accuracy'])
+    
+
+    return text2img
+
 model = build_text2img_model()
+model2 = build_text2img_model_addl()
 
 # %%
 # print(y_train)
@@ -482,115 +522,130 @@ model = build_text2img_model()
 # plt.show()
 
 # %%
-checkpoint_cb = keras.callbacks.ModelCheckpoint(
-        f"text_to_image_best_previous.keras", save_best_only=True
+
+def run_model(model):
+    checkpoint_cb = keras.callbacks.ModelCheckpoint(
+            f"text_to_image_best_previous.keras", save_best_only=True
+        )
+    early_stopping = keras.callbacks.EarlyStopping(
+        monitor='val_loss',  # metric to monitor
+        patience=8,          # number of epochs to wait for improvement
+        restore_best_weights=True  # restore the best weights after stopping
     )
-early_stopping = keras.callbacks.EarlyStopping(
-    monitor='val_loss',  # metric to monitor
-    patience=8,          # number of epochs to wait for improvement
-    restore_best_weights=True  # restore the best weights after stopping
-)
 
-lr_scheduler = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5, min_lr=1e-6, verbose=1)
+    lr_scheduler = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5, min_lr=1e-6, verbose=1)
 
-history = model.fit(
-    X_train,
-    y_train,
-    validation_data=(X_valid, y_valid),
-    batch_size=32,
-    epochs=50,
-    callbacks = [checkpoint_cb, early_stopping, lr_scheduler]
-)
+    history = model.fit(
+        X_train,
+        y_train,
+        validation_data=(X_valid, y_valid),
+        batch_size=32,
+        epochs=50,
+        callbacks = [checkpoint_cb, early_stopping, lr_scheduler]
+    )
+
+    model.save(f'submission1_text_to_image_previous.keras')
 
 #%%
-model.save(f'submission1_text_to_image_previous.keras')
+def run_plotting():
+    from tensorflow.keras.models import load_model
+
+    # Path to the saved model file
+    model_path = 'submission1_text_to_image_previous.keras'
+
+    # Load the model
+    model = load_model(model_path)
+
+    import pandas as pd
+    data_history = pd.DataFrame(history.history)
+    data_history.to_csv('text_to_image_history_previous.csv')
+    plt.plot(data_history['loss'], label='loss')
+    plt.plot(data_history['val_loss'], label='val_loss')
+    plt.xlabel('epochs')
+    plt.ylabel('score')
+    plt.legend(loc="best")
+
+
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
+
+    import pandas as pd
+    from sklearn.metrics import accuracy_score
+
+    input_data = X_test
+    labels = y_test_text
+    output_images = model.predict(input_data).reshape((input_data.shape[0] * 3, 28, 28))
+
+    predicted_nhot = image_classifier_model.predict(output_images)
+    predicted_images_values = []
+    for i in range(input_data.shape[0]):
+        predicted_images_values.append(decode_out(predicted_nhot[i*3:i*3+3]))
+
+
+    print(len(predicted_images_values))
+
+    print("Accuracy Score: ", accuracy_score(labels, predicted_images_values))
+
+    flat_pred = [i for pred in predicted_images_values for i in pred]
+    flat_label = [i for lab in labels for i in lab]
+    print("Character Accuracy Score:", accuracy_score(flat_label, flat_pred))
+
+
+    preds = predicted_images_values
+    trues = labels
+    # symbol by symbol
+    wrong_positions = np.argwhere(np.array(preds)!=trues)
+    # TODO visualize the differences perhaps scatterplot
+    #find out what kind of mistakes your models make on the misclassified samples.
+    wrong_data = X_test[wrong_positions]
+    decoded_wrong_inputs = [list(map(decode_labels,data)) for data in wrong_data]
+
+    # decoded_wrong_inputs = [[list(map(decode_labels,data)) for data in model_wrong_data] for model_wrong_data in wrong_data]
+    wrong_outputs = np.array(preds)[wrong_positions]
+    from collections import Counter
+    counter = Counter([(true,pred) for true,pred in zip(flat_label,flat_pred)])
+
+    x=[each[0] for each in counter.keys()]
+    y=[each[1] for each in counter.keys()]
+    z=[each for each in counter.values()]
+    l = list(zip(x,y,z))
+    l = sorted([(i,i,0) for i in unique_characters]) + l
+    x,y,z = [i[0] for i in l],[i[1] for i in l],[i[2] for i in l]
+
+    # z = np.log10(z)
+    # plt.figure(figsize=(8,6))
+    # sc = plt.scatter(x, y, c=z, cmap='coolwarm_r', s=50, edgecolor='none')
+    # plt.colorbar(sc, label='Intensity')
+    # plt.title("Heated Scatter Plot (Color by Value)")
+    # plt.xlabel("X Axis")
+    # plt.ylabel("Y Axis")
+    # plt.show()
+    
+    
+    from sklearn.metrics import confusion_matrix
+    from matplotlib.colors import LogNorm
+    import seaborn as sns
+    
+    fig, ax = plt.subplots(1, 1, figsize=(10,8))
+    cm = confusion_matrix(list(flat_label), list(flat_pred))
+    
+    g = sns.heatmap(cm, annot=True, fmt="d", cmap='Blues', ax=ax, norm=LogNorm(), cbar=False)
+    g.set_xticklabels(['ws', 'neg'] + list('0123456789'))
+    g.set_yticklabels(['ws', 'neg'] + list('0123456789'))
+    ax.set_title('Confusion Matrix(in %)')
+    ax.set_xlabel('Predicted')
+    ax.set_ylabel('True')
+    plt.show()
+    
+#%%
+run_model(model=model)
 
 #%%
-from tensorflow.keras.models import load_model
-
-# Path to the saved model file
-model_path = 'submission1_text_to_image_previous.keras'
-
-# Load the model
-model = load_model(model_path)
-
+run_plotting()
 #%%
-import pandas as pd
-data_history = pd.DataFrame(history.history)
-data_history.to_csv('text_to_image_history_previous.csv')
-plt.plot(data_history['loss'], label='loss')
-plt.plot(data_history['val_loss'], label='val_loss')
-plt.xlabel('epochs')
-plt.ylabel('score')
-plt.legend(loc="best")
-
-
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-#%%
-import pandas as pd
-from sklearn.metrics import accuracy_score
-
-input_data = X_test
-labels = y_test_text
-output_images = model.predict(input_data).reshape((input_data.shape[0] * 3, 28, 28))
-
-predicted_nhot = image_classifier_model.predict(output_images)
-predicted_images_values = []
-for i in range(input_data.shape[0]):
-    predicted_images_values.append(decode_out(predicted_nhot[i*3:i*3+3]))
-
-
-print(len(predicted_images_values))
-
-print("Accuracy Score: ", accuracy_score(labels, predicted_images_values))
-
-flat_pred = [i for pred in predicted_images_values for i in pred]
-flat_label = [i for lab in labels for i in lab]
-print("Character Accuracy Score:", accuracy_score(flat_label, flat_pred))
-
-
-#%%
-preds = predicted_images_values
-trues = labels
-# symbol by symbol
-wrong_positions = np.argwhere(np.array(preds)!=trues)
-# TODO visualize the differences perhaps scatterplot
-#find out what kind of mistakes your models make on the misclassified samples.
-wrong_data = X_test[wrong_positions]
-decoded_wrong_inputs = [list(map(decode_labels,data)) for data in wrong_data]
-
-#%%
-# decoded_wrong_inputs = [[list(map(decode_labels,data)) for data in model_wrong_data] for model_wrong_data in wrong_data]
-wrong_outputs = np.array(preds)[wrong_positions]
-
-wrong_out_characters = "".join([str(i) for i in wrong_outputs.ravel()])
-correct_characters = "".join([str(i) for i in trues[wrong_positions].ravel()])
-
-mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
-
-from collections import Counter
-counter = Counter([(true,pred) for true,pred in zip(flat_label,flat_pred)])
-
-#%%
-
-x=[each[0] for each in counter.keys()]
-y=[each[1] for each in counter.keys()]
-z=[each for each in counter.values()]
-l = list(zip(x,y,z))
-l = sorted([(i,i,0) for i in unique_characters]) + l
-x,y,z = [i[0] for i in l],[i[1] for i in l],[i[2] for i in l]
-
-z = np.log10(z)
-plt.figure(figsize=(8,6))
-sc = plt.scatter(x, y, c=z, cmap='coolwarm_r', s=50, edgecolor='none')
-plt.colorbar(sc, label='Intensity')
-plt.title("Heated Scatter Plot (Color by Value)")
-plt.xlabel("X Axis")
-plt.ylabel("Y Axis")
-plt.show()
+run_model(model=model2)
+run_plotting()
 #%%%
 
 # def predict_model(model, text):
