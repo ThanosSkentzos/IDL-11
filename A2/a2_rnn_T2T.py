@@ -379,19 +379,22 @@ mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
 from collections import Counter
 counts = [Counter([(true,pred) for true,pred in zip(true_characters,chars)]) for chars in pred_characters]
 
+from sklearn.metrics import confusion_matrix
+from matplotlib.colors import LogNorm
+import seaborn as sns
 
+fig, ax = plt.subplots(2, 2, figsize=(25, 20))
 for i in range(len(models)):
-    x=[each[0] for each in counts[i].keys()]
-    y=[each[1] for each in counts[i].keys()]
-    z=[each for each in counts[i].values()]
-    l = list(zip(x,y,z))
-    l = sorted([(i,i,0) for i in unique_characters]) + l
-    x,y,z = [i[0] for i in l],[i[1] for i in l],[i[2] for i in l]
-    z = np.log10(z)
-    plt.figure(figsize=(8,6))
-    sc = plt.scatter(x, y, c=z, cmap='coolwarm_r', s=50, edgecolor='none')
-    plt.colorbar(sc, label='Intensity')
-    plt.title("Heated Scatter Plot (Color by Value)")
-    plt.xlabel("X Axis")
-    plt.ylabel("Y Axis")
-    plt.show()
+    # Compute confusion matrix
+    cm = confusion_matrix(list(true_characters), list(pred_characters[i]))
+    
+    g = sns.heatmap(cm, annot=True, fmt="d", cmap='Blues', ax=ax[int(i/2)][i%2], norm=LogNorm(), cbar=False)
+    g.set_xticklabels(['ws', 'neg'] + list('0123456789'))
+    g.set_yticklabels(['ws', 'neg'] + list('0123456789'))
+    ax[int(i/2)][i%2].set_title('Confusion Matrix(in %)')
+    ax[int(i/2)][i%2].set_xlabel('Predicted')
+    ax[int(i/2)][i%2].set_ylabel('True')
+
+plt.show()
+
+# %%

@@ -1,53 +1,4 @@
 # %% [markdown]
-# <div style="text-align: right">   </div>
-# Introduction to Deep Learning (2024)
-# 
-# **Assignment 2 - Sequence processing using RNNs**
-# <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/UniversiteitLeidenLogo.svg/1280px-UniversiteitLeidenLogo.svg.png" width="300">
-# 
-# # Introduction
-# 
-# The goal of this assignment is to learn how to use encoder-decoder recurrent neural networks (RNNs). 
-# Specifically we will be dealing with a sequence to sequence problem and try to build recurrent models that can learn the principles behind simple arithmetic operations (**integer addition, subtraction and multiplication.**).
-# 
-# <img src="https://i.ibb.co/5Ky5pbk/Screenshot-2023-11-10-at-07-51-21.png" alt="Screenshot-2023-11-10-at-07-51-21" border="0" width="500"></a>
-# 
-# In this assignment you will be working with three different kinds of models, based on input/output data modalities:
-# 
-# 1. **Text-to-text**: given a text query containing two integers and an operand between them (+ or -) the model's output should be a sequence of integers that match the actual arithmetic result of this operation
-# 
-# 2. **Image-to-text**: same as above, except the query is specified as a sequence of images containing individual digits and an operand.
-# 
-# 3. **Text-to-image**: the query is specified in text format as in the text-to-text model, however the model's output should be a sequence of images corresponding to the correct result.
-# 
-# ### Description
-# 
-# Let us suppose that we want to develop a neural network that learns how to add or subtract
-# 
-# two integers that are at most two digits long. For example, given input strings of 5 characters: ‘81+24’ or
-# 
-# ’41-89’ that consist of 2 two-digit long integers and an operand between them, the network should return a
-# 
-# sequence of 3 characters: ‘105 ’ or ’-48 ’ that represent the result of their respective queries. Additionally,
-# 
-# we want to build a model that generalizes well - if the network can extract the underlying principles behind
-# 
-# the ’+’ and ’-’ operands and associated operations, it should not need too many training examples to generate
-# 
-# valid answers to unseen queries. To represent such queries we need 13 unique characters: 10 for digits (0-9),
-# 
-# 2 for the ’+’ and ’-’ operands and one for whitespaces ’ ’ used as padding.
-# 
-# The example above describes a text-to-text sequence mapping scenario. However, we can also use different
-# 
-# modalities of data to represent our queries or answers. For that purpose, the MNIST handwritten digit
-# 
-# dataset is going to be used again, however in a slightly different format. The functions below will be used to create our datasets.
-# 
-# *To work on this notebook you should create a copy of it.*
-# 
-
-# %% [markdown]
 # # Function definitions for creating the datasets
 # 
 # First we need to create our datasets that are going to be used for training our models.
@@ -58,18 +9,24 @@
 # %%
 import matplotlib.pyplot as plt
 import cv2
+
 import numpy as np
+import pandas as pd
 
+import tensorflow.keras as keras # type: ignore
+from tensorflow.keras.layers import Dense, LSTM, TimeDistributed # type: ignore
+from tensorflow.keras.layers import RepeatVector # type: ignore
+
+
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-
-import tensorflow.keras as keras
-from tensorflow.keras.layers import Dense, LSTM, Flatten, TimeDistributed # type: ignore
-from tensorflow.keras.layers import RepeatVector, Conv2D, ConvLSTM2D # type: ignore
 
 
 # %%
 from scipy.ndimage import rotate
 
+
+np.random.seed(42)
 
 # Create plus/minus operand signs
 def generate_images(number_of_images=50, sign='-'):
@@ -124,7 +81,6 @@ def create_data(highest_integer, num_addends=2, operands=['+', '-']):
     image_mapping = dict(zip(unique_characters[:10], num_data))
     image_mapping['-'] = generate_images()
     image_mapping['+'] = generate_images(sign='+')
-    image_mapping['*'] = generate_images(sign='*')
     image_mapping[' '] = np.zeros([1, 28, 28])
 
     X_text, X_img, y_text, y_img = [], [], [], []
@@ -413,6 +369,54 @@ y_pred = [decode_labels(y) for y in predictions]
 y_actual = [decode_labels(y) for y in y_test]
 accuracy = accuracy_score(y_actual, y_pred)
 print("Accuracy for image to text model:", accuracy)
+
+
+
+flat_pred = [i for pred in y_pred for i in pred]
+flat_label = [i for lab in y_actual for i in lab]
+print("Character Accuracy Score:", accuracy_score(flat_label, flat_pred))
+
+
+#%%
+preds = y_pred
+trues = y_actual
+# symbol by symbol
+wrong_positions = np.argwhere(np.array(preds)!=trues)
+# TODO visualize the differences perhaps scatterplot
+#find out what kind of mistakes your models make on the misclassified samples.
+wrong_data = X_test[wrong_positions]
+decoded_wrong_inputs = [list(map(decode_labels,data)) for data in wrong_data]
+
+#%%
+# decoded_wrong_inputs = [[list(map(decode_labels,data)) for data in model_wrong_data] for model_wrong_data in wrong_data]
+wrong_outputs = np.array(preds)[wrong_positions]
+
+wrong_out_characters = "".join([str(i) for i in wrong_outputs.ravel()])
+correct_characters = "".join([str(i) for i in trues[wrong_positions].ravel()])
+
+mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
+
+from collections import Counter
+counter = Counter([(true,pred) for true,pred in zip(flat_label,flat_pred)])
+
+#%%
+
+fig, ax = plt.subplots(1, 1, figsize=(25, 20))
+
+from sklearn.metrics import confusion_matrix
+from matplotlib.colors import LogNorm
+import seaborn as sns
+
+cm = confusion_matrix(list(flat_label), list(flat_pred))
+
+g = sns.heatmap(cm, annot=True, fmt="d", cmap='Blues', ax=ax[0][0], norm=LogNorm(), cbar=False)
+g.set_xticklabels(['ws', 'neg'] + list('0123456789'))
+g.set_yticklabels(['ws', 'neg'] + list('0123456789'))
+ax[int(i/2)][i%2].set_title('Confusion Matrix(in %)')
+ax[int(i/2)][i%2].set_xlabel('Predicted')
+ax[int(i/2)][i%2].set_ylabel('True')
+
+plt.show()
 
 # %%
 from tensorflow.keras.layers import GlobalAveragePooling2D,GlobalAveragePooling1D,ConvLSTM2D, BatchNormalization, Dropout,LayerNormalization

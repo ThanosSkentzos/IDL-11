@@ -19,4 +19,5 @@ dependencies = [
     "opencv-python>=4.10.0.84",
     "tensorrt>=10.6.0",
     "tf-keras==2.15",
+    "seaborn>=0.13.2",
 ]
