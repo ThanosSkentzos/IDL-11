@@ -254,6 +254,16 @@ def build_text2text_model():
 
     return text2text
 
+def build_text2text_model_additional_lstm():
+    text2text = keras.Sequential()
+    text2text.add(LSTM(128, input_shape=(None, len(unique_characters)), return_sequences=True))
+    text2text.add(LSTM(128))
+    text2text.add(RepeatVector(max_answer_length))
+    text2text.add(LSTM(256, return_sequences=True)) 
+    text2text.add(TimeDistributed(Dense(len(unique_characters), activation='softmax')))
+    text2text.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    text2text.summary()
+    return text2text
 # %%
 ## Your code (look at the assignment description for your tasks for text-to-text model):
 ##( Your first task is to fit the text2text model using X_text and y_text)
@@ -273,6 +283,7 @@ for each in data_percentage:
 
     # Fit the model
     model = build_text2text_model()
+    # model = build_text2text_model_additional_lstm()
     checkpoint_cb = keras.callbacks.ModelCheckpoint(
             f"text_to_text_best.keras", save_best_only=True
         )
@@ -364,7 +375,7 @@ for model_preds in preds:
 mistakes = pd.DataFrame(np.array(l).reshape(4,-1))
 mistakes.index = columns
 mistakes.columns = ["100s position","10s position","1s position"]
-mistakes.plot.bar(log=True,rot=30,cmap="coolwarm")
+mistakes.plot.bar(log=True,rot=8,cmap="coolwarm")
 plt.savefig('mistakes.png')
 #%%
 # TODO when do we get a decreased accuracy and why
@@ -375,11 +386,11 @@ score_df.index=["test_string_accuracy","test_character_accuracy","test_evaluated
 score_df.columns = columns
 df = pd.DataFrame(preds+[trues]).T
 df.columns = columns
-df.plot.scatter(columns[1],columns[-1])
-df.plot.scatter(columns[2],columns[-1])
-df.plot.scatter(columns[3],columns[-1])
+# df.plot.scatter(columns[1],columns[-1])
+# df.plot.scatter(columns[2],columns[-1])
+# df.plot.scatter(columns[3],columns[-1])
 #%%
-df.plot.scatter(columns[0],columns[-1])
+# df.plot.scatter(columns[0],columns[-1])
 #%%
 # symbol by symbol
 wrong_positions = [np.argwhere(np.array(p)!=trues) for p in preds]
