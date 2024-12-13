@@ -1,54 +1,5 @@
 # %% [markdown]
-# <div style="text-align: right">   </div>
-# Introduction to Deep Learning (2024)
-# 
-# **Assignment 2 - Sequence processing using RNNs**
-# <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/UniversiteitLeidenLogo.svg/1280px-UniversiteitLeidenLogo.svg.png" width="300">
-# 
-# # Introduction
-# 
-# The goal of this assignment is to learn how to use encoder-decoder recurrent neural networks (RNNs). 
-# Specifically we will be dealing with a sequence to sequence problem and try to build recurrent models that can learn the principles behind simple arithmetic operations (**integer addition, subtraction and multiplication.**).
-# 
-# <img src="https://i.ibb.co/5Ky5pbk/Screenshot-2023-11-10-at-07-51-21.png" alt="Screenshot-2023-11-10-at-07-51-21" border="0" width="500"></a>
-# 
-# In this assignment you will be working with three different kinds of models, based on input/output data modalities:
-# 
-# 1. **Text-to-text**: given a text query containing two integers and an operand between them (+ or -) the model's output should be a sequence of integers that match the actual arithmetic result of this operation
-# 
-# 2. **Image-to-text**: same as above, except the query is specified as a sequence of images containing individual digits and an operand.
-# 
-# 3. **Text-to-image**: the query is specified in text format as in the text-to-text model, however the model's output should be a sequence of images corresponding to the correct result.
-# 
-# ### Description
-# 
-# Let us suppose that we want to develop a neural network that learns how to add or subtract
-# 
-# two integers that are at most two digits long. For example, given input strings of 5 characters: ‘81+24’ or
-# 
-# ’41-89’ that consist of 2 two-digit long integers and an operand between them, the network should return a
-# 
-# sequence of 3 characters: ‘105 ’ or ’-48 ’ that represent the result of their respective queries. Additionally,
-# 
-# we want to build a model that generalizes well - if the network can extract the underlying principles behind
-# 
-# the ’+’ and ’-’ operands and associated operations, it should not need too many training examples to generate
-# 
-# valid answers to unseen queries. To represent such queries we need 13 unique characters: 10 for digits (0-9),
-# 
-# 2 for the ’+’ and ’-’ operands and one for whitespaces ’ ’ used as padding.
-# 
-# The example above describes a text-to-text sequence mapping scenario. However, we can also use different
-# 
-# modalities of data to represent our queries or answers. For that purpose, the MNIST handwritten digit
-# 
-# dataset is going to be used again, however in a slightly different format. The functions below will be used to create our datasets.
-# 
-# *To work on this notebook you should create a copy of it.*
-# 
-
-# %% [markdown]
-# # Function definitions for creating the datasets
+# Function definitions for creating the datasets
 # 
 # First we need to create our datasets that are going to be used for training our models.
 # 
@@ -58,18 +9,23 @@
 # %%
 import matplotlib.pyplot as plt
 import cv2
+
 import numpy as np
+import pandas as pd
 
+import tensorflow.keras as keras # type: ignore
+from tensorflow.keras.layers import Dense, LSTM, TimeDistributed # type: ignore
+from tensorflow.keras.layers import RepeatVector # type: ignore
+
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-
-import tensorflow.keras as keras
-from tensorflow.keras.layers import Dense, LSTM, Flatten, TimeDistributed # type: ignore
-from tensorflow.keras.layers import RepeatVector, Conv2D, ConvLSTM2D # type: ignore
 
 
 # %%
 from scipy.ndimage import rotate
 
+
+np.random.seed(42)
 
 # Create plus/minus operand signs
 def generate_images(number_of_images=50, sign='-'):
@@ -104,7 +60,6 @@ def show_generated(images, n=5):
     plt.show()
 
 show_generated(generate_images())
-show_generated(generate_images(sign='+'))
 
 # %%
 def create_data(highest_integer, num_addends=2, operands=['+', '-']):
@@ -125,7 +80,6 @@ def create_data(highest_integer, num_addends=2, operands=['+', '-']):
     image_mapping = dict(zip(unique_characters[:10], num_data))
     image_mapping['-'] = generate_images()
     image_mapping['+'] = generate_images(sign='+')
-    image_mapping['*'] = generate_images(sign='*')
     image_mapping[' '] = np.zeros([1, 28, 28])
 
     X_text, X_img, y_text, y_img = [], [], [], []
@@ -210,7 +164,7 @@ def display_sample(n):
     print('='*50, f'\nQuery #{n}\n\nX_text: "{X_text[n]}" = y_text: "{y_text[n]}"')
     plt.show()
 
-for _ in range(10):
+for _ in range(2):
     display_sample(np.random.randint(0, 10000, 1)[0])
 
 
@@ -274,9 +228,6 @@ print(X_text_onehot.shape, y_text_onehot.shape)
 
 #MNIST CLASSIFICATION
 
-import tensorflow.keras as keras
-import matplotlib.pyplot as plt
-import numpy as np
 from sklearn.model_selection import train_test_split
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout, Flatten, Conv2D, MaxPooling2D
@@ -351,34 +302,25 @@ def load_data(num_classes):
     plt.imshow(X_train[0])
     plt.title(f"Label: {y_train[0]}")
     unique_classes = np.unique(y_train)
-    print(unique_classes)
-    print(y_train[0])
+    
     plt.axis('off')  # Remove the axes for better visualization
     plt.show()
    
-    print(y_train.shape)
-    print(X_train.shape)
-    print(y_train[0])
-
+    # Normalize as float32 values
     X_train = X_train.astype('float32')
     X_valid = X_valid.astype('float32')
     X_test = X_test.astype('float32')
+    
+    # Normalize as normalize to 0-1
     X_train /= 255
     X_valid /= 255
     X_test /= 255
     
-    print('X_train shape:', X_train.shape)
-    print(X_train.shape[0], 'train samples')
-    #print(X_valid.shape[0], 'valid samples')
-    print(y_train[0])
-    
-
-        
+    # Convert to one hot encoding
     y_train = encode_out(y_train)
     y_valid = encode_out(y_valid)
     y_test = encode_out(y_test)
     input_shape = X_train.shape[1:]
-    print("Input shape is ", input_shape)
   
     dataset_p = DatasetPrep(X_train, X_valid, y_train, y_valid, X_test, y_test, input_shape)
     
@@ -447,6 +389,7 @@ history = image_classifier_model.fit(
     callbacks = [checkpoint_cb, early_stopping, lr_scheduler]
 )
 
+#%%
 
 import pandas as pd
 data_history = pd.DataFrame(history.history)
@@ -463,27 +406,11 @@ plt.tight_layout()
 plt.show()
 
 # %%
-import tensorflow as tf
-
-
 score3 = image_classifier_model.evaluate(dataset_p.X_test, dataset_p.y_test) 
 print(score3)
-images = tf.unstack(y_img[100], axis=0)
-single_image = images[1]  # Shape: (28, 28, 1)
-plt.imshow(single_image, cmap='gray')
-
-# to check for blank image 
-if np.all(single_image==0):
-    print(True)
-    
-single_image_batch = tf.expand_dims(single_image, axis=0)  # Shape: (1, 28, 28, 1)
-print(single_image_batch.shape)
-
-predictions = image_classifier_model.predict(single_image_batch)
-
-predicted_classes = predictions.argmax(axis=1)
-print(predicted_classes)
-
+# images = tf.unstack(y_img[100], axis=0)
+# single_image = images[1]  # Shape: (28, 28, 1)
+# plt.imshow(single_image, cmap='gray')
 
 # %%
 # TEXT TO IMAGE PREPARATION
@@ -547,12 +474,12 @@ def build_text2img_model():
 model = build_text2img_model()
 
 # %%
-print(y_train)
+# print(y_train)
 
-plt.imshow(np.hstack(y_train[200]), cmap='gray')  # Display the frame in grayscale
-plt.title(f"Y")
-plt.axis("off")
-plt.show()
+# plt.imshow(np.hstack(y_train[200]), cmap='gray')  # Display the frame in grayscale
+# plt.title(f"Y")
+# plt.axis("off")
+# plt.show()
 
 # %%
 checkpoint_cb = keras.callbacks.ModelCheckpoint(
@@ -606,20 +533,6 @@ plt.show()
 import pandas as pd
 from sklearn.metrics import accuracy_score
 
-data_history = pd.DataFrame(history.history)
-data_history.to_csv('text_to_image_history_previous.csv')
-plt.plot(data_history['loss'], label='loss')
-plt.plot(data_history['val_loss'], label='val_loss')
-plt.xlabel('epochs')
-plt.ylabel('score')
-plt.legend(loc="best")
-
-
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-#%%
 input_data = X_test
 labels = y_test_text
 output_images = model.predict(input_data).reshape((input_data.shape[0] * 3, 28, 28))
@@ -636,7 +549,48 @@ print("Accuracy Score: ", accuracy_score(labels, predicted_images_values))
 
 flat_pred = [i for pred in predicted_images_values for i in pred]
 flat_label = [i for lab in labels for i in lab]
-print("Character Accuracy Score:", accuracy_score(flat_label,flat_pred))
+print("Character Accuracy Score:", accuracy_score(flat_label, flat_pred))
+
+
+#%%
+preds = predicted_images_values
+trues = labels
+# symbol by symbol
+wrong_positions = np.argwhere(np.array(preds)!=trues)
+# TODO visualize the differences perhaps scatterplot
+#find out what kind of mistakes your models make on the misclassified samples.
+wrong_data = X_test[wrong_positions]
+decoded_wrong_inputs = [list(map(decode_labels,data)) for data in wrong_data]
+
+#%%
+# decoded_wrong_inputs = [[list(map(decode_labels,data)) for data in model_wrong_data] for model_wrong_data in wrong_data]
+wrong_outputs = np.array(preds)[wrong_positions]
+
+wrong_out_characters = "".join([str(i) for i in wrong_outputs.ravel()])
+correct_characters = "".join([str(i) for i in trues[wrong_positions].ravel()])
+
+mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
+
+from collections import Counter
+counter = Counter([(true,pred) for true,pred in zip(flat_label,flat_pred)])
+
+#%%
+
+x=[each[0] for each in counter.keys()]
+y=[each[1] for each in counter.keys()]
+z=[each for each in counter.values()]
+l = list(zip(x,y,z))
+l = sorted([(i,i,0) for i in unique_characters]) + l
+x,y,z = [i[0] for i in l],[i[1] for i in l],[i[2] for i in l]
+
+z = np.log10(z)
+plt.figure(figsize=(8,6))
+sc = plt.scatter(x, y, c=z, cmap='coolwarm_r', s=50, edgecolor='none')
+plt.colorbar(sc, label='Intensity')
+plt.title("Heated Scatter Plot (Color by Value)")
+plt.xlabel("X Axis")
+plt.ylabel("Y Axis")
+plt.show()
 #%%%
 
 # def predict_model(model, text):

@@ -1,53 +1,4 @@
 # %% [markdown]
-# <div style="text-align: right">   </div>
-# Introduction to Deep Learning (2024)
-# 
-# **Assignment 2 - Sequence processing using RNNs**
-# <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b0/UniversiteitLeidenLogo.svg/1280px-UniversiteitLeidenLogo.svg.png" width="300">
-# 
-# # Introduction
-# 
-# The goal of this assignment is to learn how to use encoder-decoder recurrent neural networks (RNNs). 
-# Specifically we will be dealing with a sequence to sequence problem and try to build recurrent models that can learn the principles behind simple arithmetic operations (**integer addition, subtraction and multiplication.**).
-# 
-# <img src="https://i.ibb.co/5Ky5pbk/Screenshot-2023-11-10-at-07-51-21.png" alt="Screenshot-2023-11-10-at-07-51-21" border="0" width="500"></a>
-# 
-# In this assignment you will be working with three different kinds of models, based on input/output data modalities:
-# 
-# 1. **Text-to-text**: given a text query containing two integers and an operand between them (+ or -) the model's output should be a sequence of integers that match the actual arithmetic result of this operation
-# 
-# 2. **Image-to-text**: same as above, except the query is specified as a sequence of images containing individual digits and an operand.
-# 
-# 3. **Text-to-image**: the query is specified in text format as in the text-to-text model, however the model's output should be a sequence of images corresponding to the correct result.
-# 
-# ### Description
-# 
-# Let us suppose that we want to develop a neural network that learns how to add or subtract
-# 
-# two integers that are at most two digits long. For example, given input strings of 5 characters: ‘81+24’ or
-# 
-# ’41-89’ that consist of 2 two-digit long integers and an operand between them, the network should return a
-# 
-# sequence of 3 characters: ‘105 ’ or ’-48 ’ that represent the result of their respective queries. Additionally,
-# 
-# we want to build a model that generalizes well - if the network can extract the underlying principles behind
-# 
-# the ’+’ and ’-’ operands and associated operations, it should not need too many training examples to generate
-# 
-# valid answers to unseen queries. To represent such queries we need 13 unique characters: 10 for digits (0-9),
-# 
-# 2 for the ’+’ and ’-’ operands and one for whitespaces ’ ’ used as padding.
-# 
-# The example above describes a text-to-text sequence mapping scenario. However, we can also use different
-# 
-# modalities of data to represent our queries or answers. For that purpose, the MNIST handwritten digit
-# 
-# dataset is going to be used again, however in a slightly different format. The functions below will be used to create our datasets.
-# 
-# *To work on this notebook you should create a copy of it.*
-# 
-
-# %% [markdown]
 # # Function definitions for creating the datasets
 # 
 # First we need to create our datasets that are going to be used for training our models.
@@ -58,18 +9,24 @@
 # %%
 import matplotlib.pyplot as plt
 import cv2
+
 import numpy as np
+import pandas as pd
 
+import tensorflow.keras as keras # type: ignore
+from tensorflow.keras.layers import Dense, LSTM, TimeDistributed # type: ignore
+from tensorflow.keras.layers import RepeatVector # type: ignore
+
+
+from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
-
-import tensorflow.keras as keras
-from tensorflow.keras.layers import Dense, LSTM, Flatten, TimeDistributed # type: ignore
-from tensorflow.keras.layers import RepeatVector, Conv2D, ConvLSTM2D # type: ignore
 
 
 # %%
 from scipy.ndimage import rotate
 
+
+np.random.seed(42)
 
 # Create plus/minus operand signs
 def generate_images(number_of_images=50, sign='-'):
@@ -104,7 +61,6 @@ def show_generated(images, n=5):
     plt.show()
 
 show_generated(generate_images())
-show_generated(generate_images(sign='+'))
 
 # %%
 def create_data(highest_integer, num_addends=2, operands=['+', '-']):
@@ -125,7 +81,6 @@ def create_data(highest_integer, num_addends=2, operands=['+', '-']):
     image_mapping = dict(zip(unique_characters[:10], num_data))
     image_mapping['-'] = generate_images()
     image_mapping['+'] = generate_images(sign='+')
-    image_mapping['*'] = generate_images(sign='*')
     image_mapping[' '] = np.zeros([1, 28, 28])
 
     X_text, X_img, y_text, y_img = [], [], [], []
@@ -210,7 +165,7 @@ def display_sample(n):
     print('='*50, f'\nQuery #{n}\n\nX_text: "{X_text[n]}" = y_text: "{y_text[n]}"')
     plt.show()
 
-for _ in range(10):
+for _ in range(2):
     display_sample(np.random.randint(0, 10000, 1)[0])
 
 
@@ -282,13 +237,13 @@ def build_text2text_model():
     text2text.add(LSTM(256, input_shape=(None, len(unique_characters))))
 
     # As the decoder RNN's input, repeatedly provide with the last output of RNN for each time step. 
-    # Repeat 3 times as that's the maximum length of the output (e.g. '  1-99' = '-98')
+    # Repeat 3 times as that's the maximum length of the output (e.g. ' 1-99' = '-98')
     # when using 2-digit integers in queries. In other words, the RNN will always produce 3 characters as its output.
     text2text.add(RepeatVector(max_answer_length))
 
     # By setting return_sequences to True, return not only the last output but all the outputs so far in the form of (num_samples, timesteps, output_dim). 
     # This is necessary as TimeDistributed in the below expects the first dimension to be the timesteps.
-    text2text.add(LSTM(256, return_sequences=True))
+    text2text.add(LSTM(256, return_sequences=True)) 
 
     # Apply a dense layer to the every temporal slice of an input. For each of step of the output sequence, decide which character should be chosen.
     text2text.add(TimeDistributed(Dense(len(unique_characters), activation='softmax')))
@@ -302,22 +257,20 @@ def build_text2text_model():
 # %%
 ## Your code (look at the assignment description for your tasks for text-to-text model):
 ##( Your first task is to fit the text2text model using X_text and y_text)
-import tensorflow.keras as keras # type: ignore
-import pandas as pd
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-from sklearn.model_selection import train_test_split
 
-
-data_percentage = [[80.0, 10.0, 10.0, 50], [50.0, 0.0, 50.0, 50], [25.0, 0.0, 75.0, 75], [10.0, 0.0, 90.0, 100]]
+data_percentage = [
+    [80.0, 10.0, 10.0, 50], 
+    [50.0, 0.0, 50.0, 50], 
+    [25.0, 0.0, 75.0, 75], 
+    [10.0, 0.0, 90.0, 100]
+]
 models=[]
 for each in data_percentage:
     print("TRAIN, VALID, TEST Percentage", each[0], each[1], each[2])
     X_train, X_test, y_train, y_test = train_test_split(X_text_onehot, y_text_onehot, 
-                                                        test_size=(each[1]+each[2])/100.0, random_state=42) 
+                                                        test_size=(each[1]+each[2])/100.0, 
+                                                        random_state=42) 
 
-    
-    print(decode_labels(X_test[0]))
-    print(decode_labels(y_test[0]))
     # Fit the model
     model = build_text2text_model()
     checkpoint_cb = keras.callbacks.ModelCheckpoint(
@@ -326,11 +279,12 @@ for each in data_percentage:
     
     if each[1]:
         X_test, X_valid, y_test, y_valid = train_test_split(X_test, y_test, 
-                                                            test_size=each[1]/(each[1]+each[2]), random_state=42) 
+                                                            test_size=each[1]/(each[1]+each[2]), 
+                                                            random_state=42) 
         early_stopping = keras.callbacks.EarlyStopping(
-            monitor='val_loss',  # metric to monitor
-            patience=10,          # number of epochs to wait for improvement
-            restore_best_weights=True  # restore the best weights after stopping
+            monitor='val_loss',         # metric to monitor
+            patience=10,                # number of epochs to wait for improvement
+            restore_best_weights=True   # restore the best weights after stopping
         )
 
         history = model.fit(
@@ -349,10 +303,6 @@ for each in data_percentage:
             epochs=each[-1],
             callbacks=[checkpoint_cb]
         )
-    model.save(f'submission1_text_to_text.keras')
-
-    data_history = pd.DataFrame(history.history)
-    data_history.to_csv('text_to_text_history.csv')
     
     plt.plot(history.history['loss'], label='loss')
     if each[1]:
@@ -360,6 +310,7 @@ for each in data_percentage:
     plt.xlabel('epochs')
     plt.ylabel('score')
     plt.legend(loc="best")
+    plt.title(f"{each[0]}, {each[1]}, {each[2]}")
 
     plt.grid(True)
     plt.tight_layout()
@@ -385,18 +336,22 @@ for each in data_percentage:
 
     # Force garbage collection
     gc.collect()
+
 #%%
 # TODO check that we get correct results -> done
 preds = [list(map(decode_labels,m.predict(X_test))) for m in models]
 trues = list(map(decode_labels,y_test))
 scores = [accuracy_score(trues,i) for i in preds+[trues]]
+scores_chars = [accuracy_score(list("".join(trues)), list("".join(i))) for i in preds+[trues]]
 evals = [m.evaluate(X_test,y_test)[1] for m in models] + [1]
+
+
 #%%
 # TODO when do we get a decreased accuracy and why
 # entire output numbers
 columns = [",".join([str(i) for i in l]) for l in data_percentage] + ['true']
-score_df = pd.DataFrame([scores,evals])
-score_df.index=["test_string_accuracy","test_character_accuracy"]
+score_df = pd.DataFrame([scores,scores_chars, evals])
+score_df.index=["test_string_accuracy","test_character_accuracy","test_evaluated_accuracy"]
 score_df.columns = columns
 df = pd.DataFrame(preds+[trues]).T
 df.columns = columns
