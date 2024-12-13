@@ -620,19 +620,23 @@ plt.tight_layout()
 plt.show()
 
 #%%
-output_images = model.predict(X_test).reshape((X_test.shape[0] * 3, 28, 28))
+input_data = X_test
+labels = y_test_text
+output_images = model.predict(input_data).reshape((input_data.shape[0] * 3, 28, 28))
 
 predicted_nhot = image_classifier_model.predict(output_images)
 predicted_images_values = []
-for i in range(X_test.shape[0]):
+for i in range(input_data.shape[0]):
     predicted_images_values.append(decode_out(predicted_nhot[i*3:i*3+3]))
 
 
 print(len(predicted_images_values))
 
-print("Accuracy Score: ", accuracy_score(y_test_text, predicted_images_values))
+print("Accuracy Score: ", accuracy_score(labels, predicted_images_values))
 
-
+flat_pred = [i for pred in predicted_images_values for i in pred]
+flat_label = [i for lab in labels for i in lab]
+print("Character Accuracy Score:", accuracy_score(flat_label,flat_pred))
 #%%%
 
 # def predict_model(model, text):
