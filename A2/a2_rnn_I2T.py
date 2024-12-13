@@ -237,6 +237,7 @@ from tensorflow.keras.callbacks import ReduceLROnPlateau
 from tensorflow.keras.regularizers import l2
 
 
+# EXPERIMENTED MODEL
 def build_img2text_model():
     # We start by initializing a sequential model
     img2text = keras.Sequential()
@@ -303,6 +304,26 @@ def build_img2text_model2():
     img2text.add(TimeDistributed(Flatten()))
     img2text.add(TimeDistributed(Dense(200, activation='relu')))
     img2text.add(LSTM(256, return_sequences=True))
+    img2text.add(LSTM(256, return_sequences=True))
+    img2text.add(LSTM(256))
+        
+    img2text.add(RepeatVector(max_answer_length))
+    img2text.add(LSTM(256, return_sequences=True))
+    img2text.add(TimeDistributed(Dense(len(unique_characters), activation='softmax')))
+    img2text.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
+    img2text.summary()
+
+    return img2text
+
+
+def build_img2text_model2_additionalLSTM():
+    img2text = keras.Sequential()
+    img2text.add(TimeDistributed(Conv2D(512, (3, 3), activation='relu'), input_shape=(5, 28, 28, 1)))
+    img2text.add(TimeDistributed(MaxPooling2D((2, 2))))
+    img2text.add(TimeDistributed(Dropout(0.2)))
+    img2text.add(TimeDistributed(Flatten()))
+    img2text.add(TimeDistributed(Dense(200, activation='relu')))
+    img2text.add(LSTM(256, return_sequences=True))
     img2text.add(LSTM(256))
     
     img2text.add(RepeatVector(max_answer_length))
@@ -314,111 +335,117 @@ def build_img2text_model2():
     return img2text
 
 model = build_img2text_model2()
+model2 = build_img2text_model2_additionalLSTM()
 
 # %%
-import tensorflow.keras as keras
-# Fit the model
-
-checkpoint_cb = keras.callbacks.ModelCheckpoint(
-        f"image_to_text_best.keras", save_best_only=True
+def run_model(model):
+    # Fit the model
+    checkpoint_cb = keras.callbacks.ModelCheckpoint(
+            f"image_to_text_best.keras", save_best_only=True
+        )
+    early_stopping = keras.callbacks.EarlyStopping(
+        monitor='val_loss',  # metric to monitor
+        patience=8,          # number of epochs to wait for improvement
+        restore_best_weights=True  # restore the best weights after stopping
     )
-early_stopping = keras.callbacks.EarlyStopping(
-    monitor='val_loss',  # metric to monitor
-    patience=8,          # number of epochs to wait for improvement
-    restore_best_weights=True  # restore the best weights after stopping
-)
 
-lr_scheduler = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5, min_lr=1e-6, verbose=1)
+    lr_scheduler = ReduceLROnPlateau(monitor="val_loss", factor=0.5, patience=5, min_lr=1e-6, verbose=1)
 
-#%%
-history = model.fit(
-    X_train,
-    y_train,
-    validation_data=(X_valid, y_valid),
-    batch_size=32,
-    epochs=100,
-    callbacks = [checkpoint_cb, early_stopping, lr_scheduler]
-)
+    history = model.fit(
+        X_train,
+        y_train,
+        validation_data=(X_valid, y_valid),
+        batch_size=32,
+        epochs=100,
+        callbacks = [checkpoint_cb, early_stopping, lr_scheduler]
+    )
 
-#%%
-model.save(f'submission1_image_to_text.keras')
+    model.save(f'submission1_image_to_text.keras')
+    
+    import pandas as pd
+    data_history = pd.DataFrame(history.history)
+    data_history.to_csv('image_to_text_history.csv')
 
-#%%
-import pandas as pd
-data_history = pd.DataFrame(history.history)
-data_history.to_csv('image_to_text_history.csv')
+    plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history['val_loss'], label='val_loss')
+    plt.xlabel('epochs')
+    plt.ylabel('score')
+    plt.legend(loc="best")
 
-plt.plot(history.history['loss'], label='loss')
-plt.plot(history.history['val_loss'], label='val_loss')
-plt.xlabel('epochs')
-plt.ylabel('score')
-plt.legend(loc="best")
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-
-print("Train Accuracy for text to text model:", model.evaluate(X_train, y_train))
-print("Test Accuracy for text to text model:", model.evaluate(X_test, y_test))
+    print("Train Accuracy for text to text model:", model.evaluate(X_train, y_train))
+    print("Test Accuracy for text to text model:", model.evaluate(X_test, y_test))
 
 
-# %%
-from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
-predictions = model.predict(X_test)
-y_pred = [decode_labels(y) for y in predictions]
-y_actual = [decode_labels(y) for y in y_test]
-accuracy = accuracy_score(y_actual, y_pred)
-print("Accuracy for image to text model:", accuracy)
+    from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+    predictions = model.predict(X_test)
+    y_pred = [decode_labels(y) for y in predictions]
+    y_actual = [decode_labels(y) for y in y_test]
+    accuracy = accuracy_score(y_actual, y_pred)
+    print("Accuracy for image to text model:", accuracy)
 
 
 
-flat_pred = [i for pred in y_pred for i in pred]
-flat_label = [i for lab in y_actual for i in lab]
-print("Character Accuracy Score:", accuracy_score(flat_label, flat_pred))
+    flat_pred = [i for pred in y_pred for i in pred]
+    flat_label = [i for lab in y_actual for i in lab]
+    print("Character Accuracy Score:", accuracy_score(flat_label, flat_pred))
 
 
-#%%
-preds = y_pred
-trues = y_actual
-# symbol by symbol
-wrong_positions = np.argwhere(np.array(preds)!=trues)
-# TODO visualize the differences perhaps scatterplot
-#find out what kind of mistakes your models make on the misclassified samples.
-wrong_data = X_test[wrong_positions]
-decoded_wrong_inputs = [list(map(decode_labels,data)) for data in wrong_data]
+    preds = y_pred
+    trues = y_actual
+    # symbol by symbol
+    wrong_positions = np.argwhere(np.array(preds)!=trues)
+    # TODO visualize the differences perhaps scatterplot
+    #find out what kind of mistakes your models make on the misclassified samples.
+    wrong_data = X_test[wrong_positions]
+    decoded_wrong_inputs = [list(map(decode_labels,data)) for data in wrong_data]
 
-#%%
-# decoded_wrong_inputs = [[list(map(decode_labels,data)) for data in model_wrong_data] for model_wrong_data in wrong_data]
-wrong_outputs = np.array(preds)[wrong_positions]
+    fig, ax = plt.subplots(1, 1, figsize=(25, 20))
 
-wrong_out_characters = "".join([str(i) for i in wrong_outputs.ravel()])
-correct_characters = "".join([str(i) for i in trues[wrong_positions].ravel()])
+    from sklearn.metrics import confusion_matrix
+    from matplotlib.colors import LogNorm
+    import seaborn as sns
 
-mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
+    cm = confusion_matrix(list(flat_label), list(flat_pred))
 
-from collections import Counter
-counter = Counter([(true,pred) for true,pred in zip(flat_label,flat_pred)])
+    g = sns.heatmap(cm, annot=True, fmt="d", cmap='Blues', ax=ax[0][0], norm=LogNorm(), cbar=False)
+    g.set_xticklabels(['ws', 'neg'] + list('0123456789'))
+    g.set_yticklabels(['ws', 'neg'] + list('0123456789'))
+    ax[int(i/2)][i%2].set_title('Confusion Matrix(in %)')
+    ax[int(i/2)][i%2].set_xlabel('Predicted')
+    ax[int(i/2)][i%2].set_ylabel('True')
 
-#%%
+    plt.show()
 
-fig, ax = plt.subplots(1, 1, figsize=(25, 20))
+    import pandas as pd
 
-from sklearn.metrics import confusion_matrix
-from matplotlib.colors import LogNorm
-import seaborn as sns
+    data_history = pd.DataFrame(history.history)
+    data_history.to_csv('image_to_text_history.csv')
+    plt.plot(history.history['loss'], label='loss')
+    plt.plot(history.history['val_loss'], label='val_loss')
+    plt.xlabel('epochs')
+    plt.ylabel('score')
+    plt.legend(loc="best")
 
-cm = confusion_matrix(list(flat_label), list(flat_pred))
 
-g = sns.heatmap(cm, annot=True, fmt="d", cmap='Blues', ax=ax[0][0], norm=LogNorm(), cbar=False)
-g.set_xticklabels(['ws', 'neg'] + list('0123456789'))
-g.set_yticklabels(['ws', 'neg'] + list('0123456789'))
-ax[int(i/2)][i%2].set_title('Confusion Matrix(in %)')
-ax[int(i/2)][i%2].set_xlabel('Predicted')
-ax[int(i/2)][i%2].set_ylabel('True')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.show()
 
-plt.show()
 
 # %%
+run_model(model)
+
+#%%
+run_model(model2)
+
+#%%
+
+# %%
+# Extra experimentation
 from tensorflow.keras.layers import GlobalAveragePooling2D,GlobalAveragePooling1D,ConvLSTM2D, BatchNormalization, Dropout,LayerNormalization
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import ReduceLROnPlateau
@@ -453,7 +480,7 @@ def build_img2text_withConv():
     img2text.add(TimeDistributed(GlobalAveragePooling2D()))
     img2text.add(BatchNormalization())
     img2text.add(Dropout(0.2))
- 
+
     #img2text.add(Flatten())
     
     img2text.add(Dense(256, activation='relu'))
@@ -480,21 +507,3 @@ def build_img2text_withConv():
     img2text.summary()
 
     return img2text
-
-
-# %%
-import pandas as pd
-
-data_history = pd.DataFrame(history.history)
-data_history.to_csv('image_to_text_history.csv')
-plt.plot(history.history['loss'], label='loss')
-plt.plot(history.history['val_loss'], label='val_loss')
-plt.xlabel('epochs')
-plt.ylabel('score')
-plt.legend(loc="best")
-
-
-plt.grid(True)
-plt.tight_layout()
-plt.show()
-# %%
