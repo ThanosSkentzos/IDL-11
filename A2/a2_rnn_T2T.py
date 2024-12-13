@@ -21,6 +21,10 @@ from tensorflow.keras.layers import RepeatVector # type: ignore
 from sklearn.metrics import accuracy_score
 from sklearn.model_selection import train_test_split
 
+from collections import Counter
+from sklearn.metrics import confusion_matrix
+from matplotlib.colors import LogNorm
+import seaborn as sns
 
 # %%
 from scipy.ndimage import rotate
@@ -282,8 +286,8 @@ for each in data_percentage:
                                                         random_state=42) 
 
     # Fit the model
-    model = build_text2text_model()
-    # model = build_text2text_model_additional_lstm()
+    # model = build_text2text_model()
+    model = build_text2text_model_additional_lstm()
     checkpoint_cb = keras.callbacks.ModelCheckpoint(
             f"text_to_text_best.keras", save_best_only=True
         )
@@ -386,6 +390,7 @@ score_df.index=["test_string_accuracy","test_character_accuracy","test_evaluated
 score_df.columns = columns
 df = pd.DataFrame(preds+[trues]).T
 df.columns = columns
+print(score_df)
 # df.plot.scatter(columns[1],columns[-1])
 # df.plot.scatter(columns[2],columns[-1])
 # df.plot.scatter(columns[3],columns[-1])
@@ -407,12 +412,8 @@ pred_characters = ["".join([str(i) for i in y]) for y in preds]
 true_characters = "".join([str(char) for y in trues for char in y])
 mapping = {i:n for i,n in zip(unique_characters,range(len(unique_characters)))}
 
-from collections import Counter
 counts = [Counter([(true,pred) for true,pred in zip(true_characters,chars)]) for chars in pred_characters]
 
-from sklearn.metrics import confusion_matrix
-from matplotlib.colors import LogNorm
-import seaborn as sns
 
 fig, ax = plt.subplots(2, 2, figsize=(25, 20))
 for i in range(len(models)):
