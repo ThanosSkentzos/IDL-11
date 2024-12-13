@@ -286,8 +286,8 @@ for each in data_percentage:
                                                         random_state=42) 
 
     # Fit the model
+    # model = build_text2text_model()
     model = build_text2text_model_additional_lstm()
-    # model = build_text2text_model_additional_lstm()
     checkpoint_cb = keras.callbacks.ModelCheckpoint(
             f"text_to_text_best.keras", save_best_only=True
         )
@@ -390,6 +390,7 @@ score_df.index=["test_string_accuracy","test_character_accuracy","test_evaluated
 score_df.columns = columns
 df = pd.DataFrame(preds+[trues]).T
 df.columns = columns
+print(score_df)
 # df.plot.scatter(columns[1],columns[-1])
 # df.plot.scatter(columns[2],columns[-1])
 # df.plot.scatter(columns[3],columns[-1])
