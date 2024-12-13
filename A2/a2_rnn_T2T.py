@@ -344,8 +344,28 @@ trues = list(map(decode_labels,y_test))
 scores = [accuracy_score(trues,i) for i in preds+[trues]]
 scores_chars = [accuracy_score(list("".join(trues)), list("".join(i))) for i in preds+[trues]]
 evals = [m.evaluate(X_test,y_test)[1] for m in models] + [1]
+#%%
+l = []
+columns = [",".join([str(i) for i in l]) for l in data_percentage]
+for model_preds in preds:
+    # fig, ax = plt.subplots(2, 2, figsize=(25, 20))
+    for i in range(3):
+        pos_pred = [p[i] for p in model_preds]
+        pos_true = [t[i] for t in trues]
+        cm = confusion_matrix(pos_pred,pos_true)
+        # print(pos,":",sns.heatmap(pos_pred,pos_true))
 
-
+        # g = sns.heatmap(cm, annot=True, fmt="d", cmap='Blues', ax=ax[int(i/2)][i%2], norm=LogNorm(), cbar=False)
+        # ax[int(i/2)][i%2].set_title('Confusion Matrix(in %)')
+        # ax[int(i/2)][i%2].set_xlabel('Predicted')
+        # ax[int(i/2)][i%2].set_ylabel('True')
+        mistakes = (1-accuracy_score(pos_true,pos_pred))*len(pos_pred)
+        l.append(int(mistakes+0.1))
+mistakes = pd.DataFrame(np.array(l).reshape(4,-1))
+mistakes.index = columns
+mistakes.columns = ["100s position","10s position","1s position"]
+mistakes.plot.bar(log=True,rot=30,cmap="coolwarm")
+plt.savefig('mistakes.png')
 #%%
 # TODO when do we get a decreased accuracy and why
 # entire output numbers
